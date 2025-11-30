@@ -103,6 +103,5 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-# Potential data
-srg3d/potentials/
-exec/potentials/
+# MacOS
+.DS_Store

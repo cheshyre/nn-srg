@@ -732,13 +732,21 @@ class CoupledPotential(Potential):
 
 
 # pylint: disable=too-many-locals
-def load_from_file(file_str):
+def load_from_file(file_str, name, channel, particles, lam=None):
     """Load potential from file.
 
     Parameters
     ----------
     file_str : str
         String path to file with potential data.
+    name : str
+        Name for potential, may reflect something about origin.
+    channel: Channel
+        Object representing the partial wave channel for the potential.
+    particles: str
+        String representing constituent particles in the interaction.
+    lam: float
+        SRG lambda value of potential, default: None == unevolved
 
     Returns
     -------
@@ -747,28 +755,14 @@ def load_from_file(file_str):
 
     """
     # Parse info about potential from filename
-    # Strip directory structure
-    end = file_str.split('/')[-1]
-
-    # Match regular expression
-    regex_str = r'V(.*)_(.*)_(.*)_SLLJT_(.*)_lambda_(.*)_Np_(.*)_(.*)\.dat'
-    result = re.search(regex_str, end)
-
-    # Extract values from matches
-    n_body_str = result.group(1)
-    order_str = result.group(2)
-    name = result.group(3)
-    channel_str = result.group(4)
-    lam = float(result.group(5))
-    particles = result.group(7)
-
-    # Convert channel to 5-tuple, then Channel object
-    channel = Channel(*tuple([int(n) for n in channel_str]))
-
-    # Get number of points
-    num_points = int(result.group(6))
-
     # Read potential
+    if lam is None:
+        lam = 50.0
+    with open(file_str) as file:
+        num_points = 0
+        for line in file:
+            if len(line.strip().split()) == 2:
+                num_points += 1
     with open(file_str) as file:
         nodes = []
         weights = []
@@ -790,9 +784,9 @@ def load_from_file(file_str):
 def load_1S0_potential(name):
     chan = Channel(spin=0, orb_ang_mom_1=0, orb_ang_mom_2=0, tot_ang_mom=0, isospin=1)
     chan_str = str(chan) + "_np"
-    path = os.path.join(STANDARD_PATH, name, f"SLLJT_{chan_str}.dat")
+    path = os.path.join(STANDARD_PATH, "NN", name, f"SLLJT_{chan_str}.dat")
 
-
+    return load_from_file(path, name, chan, "np")
     
 
 # # pylint: disable=too-many-arguments
@@ -911,24 +905,29 @@ def load_1S0_potential(name):
 #                     potential.without_weights()[i][j]))
 
 
-def plot(potential, v_min=None, v_max=None):
+def fast_and_lazy_plot(potential, v_scale=1.0):
     """Plot potential with colorbar.
 
     Parameters
     ----------
     potential : Potential
         Potential to be plotted.
-    v_min : int, optional
-        Minimum value to be reflected on the colorbar scale.
-    v_max : int, optional
-        Maximum value to be reflected on the colorbar scale.
+    v_scale: float, optional
+        Maximum magnitude to be reflected on the colorbar scale.
 
     """
-    if v_min is None or v_max is None:
-        plt.matshow(potential.without_weights())
-    else:
-        plt.matshow(potential.without_weights(), vmin=v_min, vmax=v_max)
-    plt.colorbar()
+    _, ax = plt.subplots()
+    im = ax.matshow(potential.without_weights(), vmin=-1 * v_scale, vmax=v_scale, cmap=plt.cm.RdBu_r,)
+    nodes = potential.nodes
+    steps = 20
+    plt.xticks([x for x in range(0, len(nodes), steps)])
+    ax.set_xlabel(r"p (fm$^{-1}$)")
+    ax.xaxis.set_label_position('top') 
+    ax.set_xticklabels(["{:.2f}".format(nodes[x]) for x in range(0, len(nodes), steps)])
+    plt.ylabel(r"p' (fm$^{-1}$)")
+    plt.yticks([x for x in range(0, len(nodes), steps)])
+    ax.set_yticklabels(["{:.2f}".format(nodes[x]) for x in range(0, len(nodes), steps)])
+    plt.colorbar(im)
     plt.show()
     plt.close()
 

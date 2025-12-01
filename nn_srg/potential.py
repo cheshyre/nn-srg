@@ -27,7 +27,7 @@ class PotentialType
 A container class to hold all the physical information about the potential. It
 has the following method::
 
-    potential_type = PotentialType(n_body, order, name, channel, particles)
+    potential_type = PotentialType(name, channel, particles)
 
 class Potential
 ---------------
@@ -113,24 +113,8 @@ import re
 import numpy as np
 import matplotlib.pyplot as plt
 
-NBODY_DICT = {
-    'NN': 2,
-    '3N': 3,
-}
-
 STANDARD_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                              'potentials')
-
-INV_NBODY_DICT = {v: k for k, v in NBODY_DICT.items()}
-
-ORDER_DICT = {
-    'LO': 0,
-    'NLO': 1,
-    'N2LO': 2,
-    'N3LO': 3,
-}
-
-INV_ORDER_DICT = {v: k for k, v in ORDER_DICT.items()}
 
 
 class Channel:
@@ -269,15 +253,11 @@ class PotentialType:
     """Container for information related to potential."""
 
     # pylint: disable=too-many-arguments
-    def __init__(self, n_body, order, name, channel, particles):
+    def __init__(self, name, channel, particles):
         """Construct potential type.
 
         Parameters
         ----------
-        n_body : int
-            Number of particles interacting in potential.
-        order : int
-            Order to which potential was calculated.
         name : str
             Name for potential, may reflect something about origin.
         channel: Channel
@@ -286,35 +266,9 @@ class PotentialType:
             String representing constituent particles in the interaction.
 
         """
-        self._n_body = n_body
-        self._order = order
         self._name = name
         self._channel = channel
         self._particles = particles
-
-    @property
-    def n_body(self):
-        """Return number of particles in potential.
-
-        Returns
-        -------
-        int
-            Number of particles.
-
-        """
-        return self._n_body
-
-    @property
-    def order(self):
-        """Return order to which potential was calculated.
-
-        Returns
-        -------
-        int
-            Order of potential.
-
-        """
-        return self._order
 
     @property
     def name(self):
@@ -808,10 +762,6 @@ def load_from_file(file_str):
     lam = float(result.group(5))
     particles = result.group(7)
 
-    # Convert string values to integer values
-    n_body = NBODY_DICT[n_body_str]
-    order = ORDER_DICT[order_str]
-
     # Convert channel to 5-tuple, then Channel object
     channel = Channel(*tuple([int(n) for n in channel_str]))
 
@@ -830,130 +780,135 @@ def load_from_file(file_str):
                                range(num_points)] for _ in range(num_points)])
 
     # Create potential_type
-    potential_type = PotentialType(n_body, order, name, channel, particles)
+    potential_type = PotentialType(name, channel, particles)
 
     # Return potential
     return Potential(potential_type, nodes, weights, potential, lam)
 
 
-# pylint: disable=too-many-arguments
-def load(n_body, order, name, channel, lam, particles, num_points='*'):
-    """Load potential based on parameters.
 
-    Parameters
-    ----------
-     n_body : int
-        Number of particles interacting in potential.
-    order : int
-        Order to which potential was calculated.
-    name : str
-        Name for potential, may reflect something about origin.
-    channel: Channel or (int, int, int, int, int) or str
-        Object representing the partial wave channel for the potential.
-    lam : float
-        Value of SRG flow parameter for potential.
-    particles: str
-        String representing constituent particles in the interaction.
-    num_points : int, optional
-        Number of points in potential. Should only be specified if multiple
-        versions of same potential are saved and you need a specific one.
-        Otherwise, will match the first one in lexicographical ordering.
-
-    Returns
-    -------
-    Potential
-        Potential created from extracted information and data from file.
-
-    Raises
-    ------
-    FileNotFoundError
-        If globbing doesn't match any files.
-
-    """
-    # Set up format string
-    file_format_str = '{}/V{}_{}_{}_SLLJT_{}_lambda_{:.2f}_Np_{}_{}.dat'
-
-    # Get values for format string
-    n_body_str = INV_NBODY_DICT[n_body]
-    order_str = INV_ORDER_DICT[order]
-
-    # Handle non-string formats
-    if isinstance(channel, Channel):
-        channel = str(channel)
-    elif isinstance(channel, tuple):
-        channel = ''.join(channel)
-
-    dir_str = os.path.join(STANDARD_PATH, n_body_str,
-                           'SLLJT_{}'.format(channel))
-
-    # Create full file path string
-    file_path = file_format_str.format(dir_str, n_body_str, order_str, name,
-                                       channel, lam, num_points, particles)
-
-    # Handle globbing
-    if num_points == '*':
-        try:
-            file_path = glob.glob(file_path)[0]
-        except IndexError:
-            raise FileNotFoundError('No potential with those params found.')
-
-    return load_from_file(file_path)
+def load_1S0_potential(name):
+    chan = Channel(spin=0, orb_ang_mom_1=0, orb_ang_mom_2=0, tot_ang_mom=0, isospin=1)
+    chan_str = str(chan) + "_np"
+    path = os.path.join(STANDARD_PATH, name, f"SLLJT_{chan_str}.dat")
 
 
-def save(potential, dir_str=None):
-    """Save potential with correct file-naming.
+    
 
-    Parameters
-    ----------
-    potential : Potential
-        Potential to be saved.
-    dir_str : str, optional
-        String corresponding to directory where file should be saved. May have
-        trailing `/`.
+# # pylint: disable=too-many-arguments
+# def load(n_body, order, name, channel, lam, particles, num_points='*'):
+#     """Load potential based on parameters.
 
-    """
-    # Set up format strings
-    file_format_str = '{}/V{}_{}_{}_SLLJT_{}_lambda_{:.2f}_Np_{}_{}.dat'
-    nodes_format_str = '{:.5e} {:.5e}\n'
-    potential_format_str = '{:.5e} {:.5e} {:.5e}\n'
+#     Parameters
+#     ----------
+#      n_body : int
+#         Number of particles interacting in potential.
+#     order : int
+#         Order to which potential was calculated.
+#     name : str
+#         Name for potential, may reflect something about origin.
+#     channel: Channel or (int, int, int, int, int) or str
+#         Object representing the partial wave channel for the potential.
+#     lam : float
+#         Value of SRG flow parameter for potential.
+#     particles: str
+#         String representing constituent particles in the interaction.
+#     num_points : int, optional
+#         Number of points in potential. Should only be specified if multiple
+#         versions of same potential are saved and you need a specific one.
+#         Otherwise, will match the first one in lexicographical ordering.
 
-    # Get values for format string
-    potential_type = potential.potential_type
-    n_body = potential_type.n_body
-    n_body_str = INV_NBODY_DICT[n_body]
-    order = potential_type.order
-    order_str = INV_ORDER_DICT[order]
-    name = potential_type.name
-    channel_str = str(potential_type.channel)
-    lam = potential.lam
-    num_points = len(potential.nodes)
-    particles = potential_type.particles
+#     Returns
+#     -------
+#     Potential
+#         Potential created from extracted information and data from file.
 
-    # Handle optional argument
-    if dir_str is None:
-        dir_str = os.path.join(STANDARD_PATH, n_body_str,
-                               'SLLJT_{}'.format(channel_str))
+#     Raises
+#     ------
+#     FileNotFoundError
+#         If globbing doesn't match any files.
 
-    # Strip potential trailing '/'
-    if dir_str[-1] == '/':
-        dir_str = dir_str[:-1]
+#     """
+#     # Set up format string
+#     file_format_str = '{}/V{}_{}_{}_SLLJT_{}_lambda_{:.2f}_Np_{}_{}.dat'
 
-    # Create full file path string
-    file_path = file_format_str.format(dir_str, n_body_str, order_str, name,
-                                       channel_str, lam, num_points, particles)
+#     # Handle non-string formats
+#     if isinstance(channel, Channel):
+#         channel = str(channel)
+#     elif isinstance(channel, tuple):
+#         channel = ''.join(channel)
 
-    # Create directory if it doesnt exist
-    _ensure_dir_for_file(file_path)
+#     dir_str = os.path.join(STANDARD_PATH, n_body_str,
+#                            'SLLJT_{}'.format(channel))
 
-    # Output potential
-    with open(file_path, 'w+') as file:
-        for weight, node in zip(potential.weights, potential.nodes):
-            file.write(nodes_format_str.format(weight, node))
-        for i in range(num_points):
-            for j in range(num_points):
-                file.write(potential_format_str.format(
-                    potential.nodes[i], potential.nodes[j],
-                    potential.without_weights()[i][j]))
+#     # Create full file path string
+#     file_path = file_format_str.format(dir_str, n_body_str, order_str, name,
+#                                        channel, lam, num_points, particles)
+
+#     # Handle globbing
+#     if num_points == '*':
+#         try:
+#             file_path = glob.glob(file_path)[0]
+#         except IndexError:
+#             raise FileNotFoundError('No potential with those params found.')
+
+#     return load_from_file(file_path)
+
+
+# def save(potential, dir_str=None):
+#     """Save potential with correct file-naming.
+
+#     Parameters
+#     ----------
+#     potential : Potential
+#         Potential to be saved.
+#     dir_str : str, optional
+#         String corresponding to directory where file should be saved. May have
+#         trailing `/`.
+
+#     """
+#     # Set up format strings
+#     file_format_str = '{}/V{}_{}_{}_SLLJT_{}_lambda_{:.2f}_Np_{}_{}.dat'
+#     nodes_format_str = '{:.5e} {:.5e}\n'
+#     potential_format_str = '{:.5e} {:.5e} {:.5e}\n'
+
+#     # Get values for format string
+#     potential_type = potential.potential_type
+#     n_body = potential_type.n_body
+#     n_body_str = INV_NBODY_DICT[n_body]
+#     order = potential_type.order
+#     order_str = INV_ORDER_DICT[order]
+#     name = potential_type.name
+#     channel_str = str(potential_type.channel)
+#     lam = potential.lam
+#     num_points = len(potential.nodes)
+#     particles = potential_type.particles
+
+#     # Handle optional argument
+#     if dir_str is None:
+#         dir_str = os.path.join(STANDARD_PATH, n_body_str,
+#                                'SLLJT_{}'.format(channel_str))
+
+#     # Strip potential trailing '/'
+#     if dir_str[-1] == '/':
+#         dir_str = dir_str[:-1]
+
+#     # Create full file path string
+#     file_path = file_format_str.format(dir_str, n_body_str, order_str, name,
+#                                        channel_str, lam, num_points, particles)
+
+#     # Create directory if it doesnt exist
+#     _ensure_dir_for_file(file_path)
+
+#     # Output potential
+#     with open(file_path, 'w+') as file:
+#         for weight, node in zip(potential.weights, potential.nodes):
+#             file.write(nodes_format_str.format(weight, node))
+#         for i in range(num_points):
+#             for j in range(num_points):
+#                 file.write(potential_format_str.format(
+#                     potential.nodes[i], potential.nodes[j],
+#                     potential.without_weights()[i][j]))
 
 
 def plot(potential, v_min=None, v_max=None):

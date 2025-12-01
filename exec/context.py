@@ -5,6 +5,6 @@ sys.path.insert(0, os.path.abspath('..'))
 sys.path.insert(0, os.path.abspath('.'))
 
 # pylint: disable=wrong-import-position
-import srg3d    # noqa: E402
+import nn_srg    # noqa: E402
 
-__all__ = ['srg3d']
+__all__ = ['nn_srg']

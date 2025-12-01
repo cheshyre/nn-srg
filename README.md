@@ -1,1 +1,1 @@
-# srg3d-py
+# nn_srg-py

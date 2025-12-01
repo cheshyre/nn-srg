@@ -42,7 +42,7 @@ class SRG:
 
         Parameters
         ----------
-        potential : srg3d.potential.Potential
+        potential : nn_srg.potential.Potential
             Potential object to be evolved. Comes with weights, lam, and
             kinetic energy, which is everything you need to do the SRG
             evolution.

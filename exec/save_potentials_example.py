@@ -10,10 +10,10 @@ import os
 
 # Check if module is installed, otherwise load locally
 try:
-    import srg3d.potential as potential
+    import nn_srg.potential as potential
 except ImportError:
-    from context import srg3d
-    potential = srg3d.potential
+    from context import nn_srg
+    potential = nn_srg.potential
 
 
 path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'potentials')

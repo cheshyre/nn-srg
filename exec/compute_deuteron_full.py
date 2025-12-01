@@ -18,12 +18,12 @@ from numpy.linalg import eigh
 
 # Check if module is installed, otherwise load locally
 try:
-    import srg3d.potential as potential
-    import srg3d.srg as srg
+    import nn_srg.potential as potential
+    import nn_srg.srg as srg
 except ImportError:
-    from context import srg3d
-    potential = srg3d.potential
-    srg = srg3d.srg
+    from context import nn_srg
+    potential = nn_srg.potential
+    srg = nn_srg.srg
 
 
 def _get_coupled_channel_hamiltonian(channels):

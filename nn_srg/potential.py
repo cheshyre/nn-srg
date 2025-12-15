@@ -601,14 +601,12 @@ class CoupledPotential(Potential):
         """
         self._construction = list_of_potentials
         channels = [x.potential_type.channel for x in list_of_potentials]
-        n_body = {x.potential_type.n_body for x in list_of_potentials}
-        order = {x.potential_type.order for x in list_of_potentials}
         name = {x.potential_type.name for x in list_of_potentials}
         particles = {x.potential_type.particles for x in list_of_potentials}
-        if len(n_body) * len(order) * len(name) * len(particles) != 1:
+        if len(name) * len(particles) != 1:
             raise ValueError('Given potentials cannot be coupled.')
         coupled_channel = CoupledChannel(channels)
-        potential_type = PotentialType(n_body.pop(), order.pop(), name.pop(),
+        potential_type = PotentialType(name.pop(),
                                        coupled_channel, particles.pop())
         lam = {x.lam for x in list_of_potentials}
         if len(lam) != 1:
@@ -787,6 +785,25 @@ def load_1S0_potential(name):
     path = os.path.join(STANDARD_PATH, "NN", name, f"SLLJT_{chan_str}.dat")
 
     return load_from_file(path, name, chan, "np")
+
+
+def load_3S1_3D1_potential(name):
+    pot_list = []
+
+    for l1, l2 in [
+        (0, 0),
+        (0, 2),
+        (2, 0),
+        (2, 2),
+    ]:
+        chan = Channel(spin=1, orb_ang_mom_1=l1, orb_ang_mom_2=l2, tot_ang_mom=1, isospin=0)
+        chan_str = str(chan) + "_np"
+        path = os.path.join(STANDARD_PATH, "NN", name, f"SLLJT_{chan_str}.dat")
+
+        pot_list.append(
+            load_from_file(path, name, chan, "np")
+        ) 
+    return CoupledPotential(pot_list)
     
 
 # # pylint: disable=too-many-arguments

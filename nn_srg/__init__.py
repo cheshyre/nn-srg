@@ -14,5 +14,7 @@ from __future__ import unicode_literals
 
 from nn_srg import potential
 from nn_srg import srg
+from nn_srg import diagonalize
+from nn_srg import phase_shift
 
-__all__ = ['srg', 'potential']
+__all__ = ['srg', 'potential', 'diagonalize', 'phase_shift']

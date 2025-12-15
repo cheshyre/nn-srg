@@ -5,7 +5,7 @@ class SRG
 An abstraction for the SRG evolution intended to work like a numerical
 integrator. It has the following methods::
 
-    srg = SRG(potential, flow_operator_mask_v, flow_operator_mask_k)
+    srg = SRG(potential)
     srg.evolve(lam)
     evolved_potential = srg.get_potential()
     srg.replace_potential(new_potential)
@@ -37,7 +37,7 @@ import scipy.integrate as integ
 class SRG:
     """Interface for the 3-D SRG evolution."""
 
-    def __init__(self, potential, flow_operator_mask_v, flow_operator_mask_k):
+    def __init__(self, potential, flow_operator_mask_v=None, flow_operator_mask_k=None):
         """Initialize SRG evolution object.
 
         Parameters
@@ -58,6 +58,10 @@ class SRG:
         self._v = potential.without_weights()
         self._k = potential.kinetic_energy()
         self._lam = potential.lam
+        if flow_operator_mask_v is None:
+            flow_operator_mask_v = np.zeros_like(self._v)
+        if flow_operator_mask_k is None:
+            flow_operator_mask_k = np.ones_like(self._v)
         self._flow_op_mask_v = flow_operator_mask_v
         self._flow_op_mask_k = flow_operator_mask_k
         self._flow = 'lambda'
@@ -133,8 +137,8 @@ class SRG:
         """
         return self._potential.copy(self._v, self._lam)
 
-    def replace_potential(self, new_potential, flow_operator_mask_v,
-                          flow_operator_mask_k):
+    def replace_potential(self, new_potential, flow_operator_mask_v=None,
+                          flow_operator_mask_k=None):
         """Replace potential being used for SRG evolution with another.
 
         Parameters
@@ -171,6 +175,10 @@ class SRG:
         self._v = new_potential.without_weights()
         self._k = new_potential.kinetic_energy()
         self._lam = new_potential.lam
+        if flow_operator_mask_v is None:
+            flow_operator_mask_v = np.zeros_like(self._v)
+        if flow_operator_mask_k is None:
+            flow_operator_mask_k = np.ones_like(self._v)
         self._flow_op_mask_v = flow_operator_mask_v
         self._flow_op_mask_k = flow_operator_mask_k
 

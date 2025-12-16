@@ -22,6 +22,7 @@ Changelog:
         Initial completion of module. Tested and verified it works.
 
 """
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -64,10 +65,9 @@ class SRG:
             flow_operator_mask_k = np.ones_like(self._v)
         self._flow_op_mask_v = flow_operator_mask_v
         self._flow_op_mask_k = flow_operator_mask_k
-        self._flow = 'lambda'
+        self._flow = "lambda"
 
-    def evolve(self, lam, verbose=False, integrator='dopri5',
-               **integrator_params):
+    def evolve(self, lam, verbose=False, integrator="dopri5", **integrator_params):
         """Evolve potential to specified lam.
 
         Evolve the SRG object (more specifically the potential) to the
@@ -106,19 +106,21 @@ class SRG:
         # Default parameters for integrator chosen based optimal results while
         # testing
         if not integrator_params:
-            solver.set_integrator(integrator, atol=10**(-12), rtol=10**(-12),
-                                  nsteps=10**(9))
+            solver.set_integrator(
+                integrator, atol=10 ** (-12), rtol=10 ** (-12), nsteps=10 ** (9)
+            )
         else:
             solver.set_integrator(integrator, **integrator_params)
-        solver.set_f_params(self._k, self._flow_op_mask_v,
-                            self._potential.weights, self._flow, verbose)
+        solver.set_f_params(
+            self._k, self._flow_op_mask_v, self._potential.weights, self._flow, verbose
+        )
 
         solver.set_initial_value(_flatten(self._v), self._lam)
         solver.integrate(lam)
         if solver.successful():
             self._v = _unflatten(solver.y)
         else:
-            raise Exception('Integration failed.')
+            raise Exception("Integration failed.")
 
         # If successful, update value of lambda
         self._lam = lam
@@ -137,8 +139,9 @@ class SRG:
         """
         return self._potential.copy(self._v, self._lam)
 
-    def replace_potential(self, new_potential, flow_operator_mask_v=None,
-                          flow_operator_mask_k=None):
+    def replace_potential(
+        self, new_potential, flow_operator_mask_v=None, flow_operator_mask_k=None
+    ):
         """Replace potential being used for SRG evolution with another.
 
         Parameters
@@ -164,12 +167,12 @@ class SRG:
         instead.
 
         """
-        eps = 10**(-4)
+        eps = 10 ** (-4)
 
         if self._potential.potential_type != new_potential.potential_type:
-            raise ValueError('New potential does not have same type.')
+            raise ValueError("New potential does not have same type.")
         if abs(self._lam - new_potential.lam) > eps:
-            raise ValueError('New potential is not at the same lam')
+            raise ValueError("New potential is not at the same lam")
 
         self._potential = new_potential
         self._v = new_potential.without_weights()
@@ -187,8 +190,7 @@ class SRG:
 
 
 # pylint: disable=too-many-arguments,too-many-locals,invalid-name
-def _srg_rhs_old(s, potential, kinetic, potential_weight, weights, flow,
-                 verbose):
+def _srg_rhs_old(s, potential, kinetic, potential_weight, weights, flow, verbose):
     """Old implementation of SRG flow equation.
 
     New implementation is more efficient and reflects actual form better.
@@ -207,26 +209,40 @@ def _srg_rhs_old(s, potential, kinetic, potential_weight, weights, flow,
     TX = np.dot(T, X)
     W = np.diag(weights)
 
-    rhs = -1 * (_mm(Vdiff, TT) + _mm(TT, Vdiff)) + 2 * _mmm(T, Vdiff, T) \
-        + 2 / pi * (_mmm(TV, W, TV) + _mmm(VT, W, VT) + _mmm(VT, W, XT)
-                    + _mmm(TV, W, XT) + _mmm(XT, W, VT) + _mmm(XT, W, TV)
-                    - 2 * (_mmm(VT, W, TV) + _mmm(VT, W, TX)
-                           + _mmm(TX, W, TV))) \
-        + 4 / pi**2 * (_mmmmm(VT, W, VT, W, X) + _mmmmm(XT, W, VT, W, V)
-                       - 2 * _mmmmm(VT, W, X, W, TV))
+    rhs = (
+        -1 * (_mm(Vdiff, TT) + _mm(TT, Vdiff))
+        + 2 * _mmm(T, Vdiff, T)
+        + 2
+        / pi
+        * (
+            _mmm(TV, W, TV)
+            + _mmm(VT, W, VT)
+            + _mmm(VT, W, XT)
+            + _mmm(TV, W, XT)
+            + _mmm(XT, W, VT)
+            + _mmm(XT, W, TV)
+            - 2 * (_mmm(VT, W, TV) + _mmm(VT, W, TX) + _mmm(TX, W, TV))
+        )
+        + 4
+        / pi**2
+        * (
+            _mmmmm(VT, W, VT, W, X)
+            + _mmmmm(XT, W, VT, W, V)
+            - 2 * _mmmmm(VT, W, X, W, TV)
+        )
+    )
 
     if verbose:
         print(s)
 
     # Use commutator defined below
-    if flow == 'lambda':
-        factor = (-4.0/(s**5))
+    if flow == "lambda":
+        factor = -4.0 / (s**5)
         rhs *= factor
     return _flatten(rhs)
 
 
-def _srg_rhs(s, potential, kinetic, potential_weight, weights, flow,
-             verbose):
+def _srg_rhs(s, potential, kinetic, potential_weight, weights, flow, verbose):
     T = kinetic
     V = _unflatten(potential)
 
@@ -256,8 +272,8 @@ def _srg_rhs(s, potential, kinetic, potential_weight, weights, flow,
         print(s)
 
     # Add factor for lambda flow vs s flow
-    if flow == 'lambda':
-        factor = (-4.0/(s**5))
+    if flow == "lambda":
+        factor = -4.0 / (s**5)
         rhs *= factor
     return _flatten(rhs)
 

@@ -113,16 +113,14 @@ import re
 import numpy as np
 import matplotlib.pyplot as plt
 
-STANDARD_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                             'potentials')
+STANDARD_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "potentials")
 
 
 class Channel:
     """Container for information on channel for potential."""
 
     # pylint: disable=too-many-arguments
-    def __init__(self, spin, orb_ang_mom_1, orb_ang_mom_2, tot_ang_mom,
-                 isospin):
+    def __init__(self, spin, orb_ang_mom_1, orb_ang_mom_2, tot_ang_mom, isospin):
         """Create Channel object.
 
         Parameters
@@ -165,8 +163,9 @@ class Channel:
             String of 5 integers with channel information which are SLLJT.
 
         """
-        return '{}{}{}{}{}'.format(self._spin, self._l1, self._l2, self._j,
-                                   self._isospin)
+        return "{}{}{}{}{}".format(
+            self._spin, self._l1, self._l2, self._j, self._isospin
+        )
 
     def __eq__(self, other):
         """Return whether channel is same as another channel object.
@@ -207,10 +206,10 @@ class CoupledChannel(Channel):
         tot_ang_moms = {x.as_5tuple()[3] for x in list_of_channels}
         isospins = {x.as_5tuple()[4] for x in list_of_channels}
         if len(spins) * len(isospins) * len(tot_ang_moms) != 1:
-            raise ValueError('Given channels cannot be coupled.')
-        super(CoupledChannel, self).__init__(spins.pop(), '*', '*',
-                                             tot_ang_moms.pop(),
-                                             isospins.pop())
+            raise ValueError("Given channels cannot be coupled.")
+        super(CoupledChannel, self).__init__(
+            spins.pop(), "*", "*", tot_ang_moms.pop(), isospins.pop()
+        )
         self._channels = list_of_channels
 
     @property
@@ -233,8 +232,7 @@ class CoupledChannel(Channel):
             True if coupled channels are equal, False otherwise.
 
         """
-        return False not in {x == y for x, y in zip(self.channels,
-                                                    other.channels)}
+        return False not in {x == y for x, y in zip(self.channels, other.channels)}
 
     def __ne__(self, other):
         """Return whether coupled channel object is not same as another.
@@ -245,8 +243,7 @@ class CoupledChannel(Channel):
             True if coupled channels are not equal, False otherwise.
 
         """
-        return False in {x == y for x, y in zip(self.channels,
-                                                other.channels)}
+        return False in {x == y for x, y in zip(self.channels, other.channels)}
 
 
 class PotentialType:
@@ -315,11 +312,13 @@ class PotentialType:
             True if same, False otherwise.
 
         """
-        return ((self.n_body == other.n_body)
-                and (self.order == other.order)
-                and (self.name == other.name)
-                and (self.channel == other.channel)
-                and (self.particles == other.particles))
+        return (
+            (self.n_body == other.n_body)
+            and (self.order == other.order)
+            and (self.name == other.name)
+            and (self.channel == other.channel)
+            and (self.particles == other.particles)
+        )
 
     def __ne__(self, other):
         """Return whether potential type is not same as other potential type.
@@ -330,19 +329,22 @@ class PotentialType:
             False if same, True otherwise.
 
         """
-        return not ((self.n_body == other.n_body)
-                    and (self.order == other.order)
-                    and (self.name == other.name)
-                    and (self.channel == other.channel)
-                    and (self.particles == other.particles))
+        return not (
+            (self.n_body == other.n_body)
+            and (self.order == other.order)
+            and (self.name == other.name)
+            and (self.channel == other.channel)
+            and (self.particles == other.particles)
+        )
 
 
 class Potential:
     """Class encapsulating all relevant information about a potential."""
 
     # pylint: disable=too-many-arguments
-    def __init__(self, potential_type, nodes, weights, potential, lam=50.0,
-                 has_weights=False):
+    def __init__(
+        self, potential_type, nodes, weights, potential, lam=50.0, has_weights=False
+    ):
         """Create potential from parameters.
 
         Parameters
@@ -386,8 +388,9 @@ class Potential:
             New potential with new data.
 
         """
-        return Potential(self._potential_type, self._nodes, self._weights,
-                         potential, lam)
+        return Potential(
+            self._potential_type, self._nodes, self._weights, potential, lam
+        )
 
     def with_weights(self):
         """Return potential with weights factored in (for calculations).
@@ -431,16 +434,17 @@ class Potential:
 
         """
         if dim >= len(self.nodes):
-            raise ValueError('Value of dim is not smaller than current dim.')
+            raise ValueError("Value of dim is not smaller than current dim.")
         if dim <= 0:
-            raise ValueError('Zero or negative dim is not allowed.')
+            raise ValueError("Zero or negative dim is not allowed.")
 
         new_data = self._potential[np.ix_(list(range(dim)), list(range(dim)))]
         new_nodes = self._nodes[:dim]
         new_weights = self._weights[:dim]
 
-        return Potential(self._potential_type, new_nodes, new_weights,
-                         new_data, self._lam)
+        return Potential(
+            self._potential_type, new_nodes, new_weights, new_data, self._lam
+        )
 
     def kinetic_energy(self):
         """Return kinetic energy for potential (for calculations).
@@ -466,7 +470,7 @@ class Potential:
         # Numerical errors smaller than this are acceptable
         # If there is something wrong with the physics, it should produce
         # errors larger than this.
-        eps = 10**(-4)
+        eps = 10 ** (-4)
 
         if self.potential_type != other.potential_type:
             return False
@@ -474,15 +478,14 @@ class Potential:
             return False
         if abs(self.lam - other.lam) > eps:
             return False
-        for p_self, p_other, w_self, w_other in zip(self.nodes, other.nodes,
-                                                    self.weights,
-                                                    other.weights):
+        for p_self, p_other, w_self, w_other in zip(
+            self.nodes, other.nodes, self.weights, other.weights
+        ):
             if abs(p_self - p_other) > eps or abs(w_self - w_other) > eps:
                 return False
         for i in range(self.dim):
             for j in range(self.dim):
-                diff = abs(self.without_weights()[i][j] -
-                           other.without_weights()[i][j])
+                diff = abs(self.without_weights()[i][j] - other.without_weights()[i][j])
                 if diff > eps:
                     return False
         return True
@@ -500,7 +503,7 @@ class Potential:
         # Numerical errors smaller than this are acceptable
         # If there is something wrong with the physics, it should produce
         # errors larger than this.
-        eps = 10**(-4)
+        eps = 10 ** (-4)
 
         if self.potential_type != other.potential_type:
             return True
@@ -508,15 +511,14 @@ class Potential:
             return True
         if abs(self.lam - other.lam) > eps:
             return True
-        for p_self, p_other, w_self, w_other in zip(self.nodes, other.nodes,
-                                                    self.weights,
-                                                    other.weights):
+        for p_self, p_other, w_self, w_other in zip(
+            self.nodes, other.nodes, self.weights, other.weights
+        ):
             if abs(p_self - p_other) > eps or abs(w_self - w_other) > eps:
                 return True
         for i in range(self.dim):
             for j in range(self.dim):
-                diff = abs(self.without_weights()[i][j] -
-                           other.without_weights()[i][j])
+                diff = abs(self.without_weights()[i][j] - other.without_weights()[i][j])
                 if diff > eps:
                     return True
         return False
@@ -604,21 +606,20 @@ class CoupledPotential(Potential):
         name = {x.potential_type.name for x in list_of_potentials}
         particles = {x.potential_type.particles for x in list_of_potentials}
         if len(name) * len(particles) != 1:
-            raise ValueError('Given potentials cannot be coupled.')
+            raise ValueError("Given potentials cannot be coupled.")
         coupled_channel = CoupledChannel(channels)
-        potential_type = PotentialType(name.pop(),
-                                       coupled_channel, particles.pop())
+        potential_type = PotentialType(name.pop(), coupled_channel, particles.pop())
         lam = {x.lam for x in list_of_potentials}
         if len(lam) != 1:
-            raise ValueError('Not all given potentials are at the same lam.')
+            raise ValueError("Not all given potentials are at the same lam.")
         lam = lam.pop()
         dim = {x.dim for x in list_of_potentials}
         if len(dim) != 1:
-            raise ValueError('Not all given potentials have same dim.')
+            raise ValueError("Not all given potentials have same dim.")
         dim = dim.pop()
         c_dim = int(sqrt(len(list_of_potentials)))
         if c_dim**2 != len(list_of_potentials):
-            raise ValueError('Non-square number of potentials given.')
+            raise ValueError("Non-square number of potentials given.")
         nodes = []
         weights = []
         for pot in list_of_potentials[:c_dim]:
@@ -637,8 +638,9 @@ class CoupledPotential(Potential):
                 data = list_of_potentials[i * c_dim + j].without_weights()
                 potential_data[r_s:r_e, c_s:c_e] = data
                 self._channel_indexes.append((r_s, r_e, c_s, c_e))
-        super(CoupledPotential, self).__init__(potential_type, nodes, weights,
-                                               potential_data, lam)
+        super(CoupledPotential, self).__init__(
+            potential_type, nodes, weights, potential_data, lam
+        )
         self._c_dim = c_dim
         self._w_dim = dim
         self._channels = channels
@@ -685,14 +687,13 @@ class CoupledPotential(Potential):
 
         """
         if dim >= self._w_dim:
-            raise ValueError('Value of dim is not smaller than current dim.')
+            raise ValueError("Value of dim is not smaller than current dim.")
         if dim <= 0:
-            raise ValueError('Zero or negative dim is not allowed.')
+            raise ValueError("Zero or negative dim is not allowed.")
         new_potentials = []
         for pot, ranges in zip(self._construction, self._channel_indexes):
             sub_matrix = _submatrix(self._potential, ranges)
-            new_potentials.append(pot.copy(sub_matrix,
-                                           self._lam).reduce_dim(dim))
+            new_potentials.append(pot.copy(sub_matrix, self._lam).reduce_dim(dim))
         return CoupledPotential(new_potentials)
 
     def extract_channel_potential(self, channel):
@@ -709,12 +710,13 @@ class CoupledPotential(Potential):
             Potential corresponding to channel.
 
         """
-        for chan, potential, ranges in zip(self._channels, self._construction,
-                                           self._channel_indexes):
+        for chan, potential, ranges in zip(
+            self._channels, self._construction, self._channel_indexes
+        ):
             if channel == chan:
                 sub_matrix = _submatrix(self._potential, ranges)
                 return potential.copy(sub_matrix, self._lam)
-        raise ValueError('Channel not found.')
+        raise ValueError("Channel not found.")
 
     @property
     def dim(self):
@@ -768,15 +770,18 @@ def load_from_file(file_str, name, channel, particles, lam=None):
             vals = file.readline().split()
             weights.append(float(vals[0]))
             nodes.append(float(vals[1]))
-        potential = np.array([[float(file.readline().split()[-1]) for _ in
-                               range(num_points)] for _ in range(num_points)])
+        potential = np.array(
+            [
+                [float(file.readline().split()[-1]) for _ in range(num_points)]
+                for _ in range(num_points)
+            ]
+        )
 
     # Create potential_type
     potential_type = PotentialType(name, channel, particles)
 
     # Return potential
     return Potential(potential_type, nodes, weights, potential, lam)
-
 
 
 def load_1S0_potential(name):
@@ -796,15 +801,15 @@ def load_3S1_3D1_potential(name):
         (2, 0),
         (2, 2),
     ]:
-        chan = Channel(spin=1, orb_ang_mom_1=l1, orb_ang_mom_2=l2, tot_ang_mom=1, isospin=0)
+        chan = Channel(
+            spin=1, orb_ang_mom_1=l1, orb_ang_mom_2=l2, tot_ang_mom=1, isospin=0
+        )
         chan_str = str(chan) + "_np"
         path = os.path.join(STANDARD_PATH, "NN", name, f"SLLJT_{chan_str}.dat")
 
-        pot_list.append(
-            load_from_file(path, name, chan, "np")
-        ) 
+        pot_list.append(load_from_file(path, name, chan, "np"))
     return CoupledPotential(pot_list)
-    
+
 
 # # pylint: disable=too-many-arguments
 # def load(n_body, order, name, channel, lam, particles, num_points='*'):
@@ -934,12 +939,17 @@ def fast_and_lazy_plot(potential, v_scale=1.0):
 
     """
     _, ax = plt.subplots()
-    im = ax.matshow(potential.without_weights(), vmin=-1 * v_scale, vmax=v_scale, cmap=plt.cm.RdBu_r,)
+    im = ax.matshow(
+        potential.without_weights(),
+        vmin=-1 * v_scale,
+        vmax=v_scale,
+        cmap=plt.cm.RdBu_r,
+    )
     nodes = potential.nodes
     steps = 20
     plt.xticks([x for x in range(0, len(nodes), steps)])
     ax.set_xlabel(r"p (fm$^{-1}$)")
-    ax.xaxis.set_label_position('top') 
+    ax.xaxis.set_label_position("top")
     ax.set_xticklabels(["{:.2f}".format(nodes[x]) for x in range(0, len(nodes), steps)])
     plt.ylabel(r"p' (fm$^{-1}$)")
     plt.yticks([x for x in range(0, len(nodes), steps)])
@@ -954,15 +964,17 @@ def fast_and_lazy_plot(potential, v_scale=1.0):
 
 def _add_w(matrix, weights, nodes):
     factor_vector = [sqrt(w) * p for w, p in zip(weights, nodes)]
-    weighted_matrix = np.dot(np.dot(np.diag(factor_vector), matrix),
-                             np.diag(factor_vector))
+    weighted_matrix = np.dot(
+        np.dot(np.diag(factor_vector), matrix), np.diag(factor_vector)
+    )
     return 2 / pi * weighted_matrix
 
 
 def _rem_w(matrix, weights, nodes):
-    factor_vector = [1/(sqrt(w) * p) for w, p in zip(weights, nodes)]
-    unweighted_matrix = np.dot(np.dot(np.diag(factor_vector), pi / 2 * matrix),
-                               np.diag(factor_vector))
+    factor_vector = [1 / (sqrt(w) * p) for w, p in zip(weights, nodes)]
+    unweighted_matrix = np.dot(
+        np.dot(np.diag(factor_vector), pi / 2 * matrix), np.diag(factor_vector)
+    )
     return unweighted_matrix
 
 
@@ -973,5 +985,6 @@ def _ensure_dir_for_file(file):
 
 
 def _submatrix(potential, ranges):
-    return potential[np.ix_(list(range(ranges[0], ranges[1])),
-                            list(range(ranges[2], ranges[3])))]
+    return potential[
+        np.ix_(list(range(ranges[0], ranges[1])), list(range(ranges[2], ranges[3])))
+    ]

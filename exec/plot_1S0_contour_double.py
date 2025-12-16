@@ -1,5 +1,5 @@
 # Copyright (c) 2025 Matthias Heinz
-# 
+#
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
@@ -41,11 +41,8 @@ kmax = 5.0
 nodes = np.linspace(0.0, kmax, 200)
 
 # Set lambdas to show
-lambdas = [
-    (25.0, r"\infty")
-] + [
-    (x, f"{x:0.1f}" + r"\:\mathrm{fm}^{-1}")
-    for x in [4.0, 2.5, 2.0, 1.8]
+lambdas = [(25.0, r"\infty")] + [
+    (x, f"{x:0.1f}" + r"\:\mathrm{fm}^{-1}") for x in [4.0, 2.5, 2.0, 1.8]
 ]
 
 # Set up initial figure
@@ -84,8 +81,8 @@ for i, lll in enumerate(lambdas):
     ax.tick_params(bottom=True, top=True, left=True, right=True, which="both")
     ax.tick_params(axis="x", which="both", direction="in")
     ax.tick_params(axis="y", which="both", direction="in")
-    ax.tick_params(which='major', length=5)
-    
+    ax.tick_params(which="major", length=5)
+
     im = ax.matshow(
         potential,
         extent=[0.0, kmax, kmax, 0.0],
@@ -122,7 +119,8 @@ for i, lll in enumerate(lambdas):
         # ax.tick_params(axis="y", which="both", left=False)
     else:
         ax.text(
-            4.3, 1.1,
+            4.3,
+            1.1,
             "EM500",
             ha="right",
             bbox=dict(facecolor="white", edgecolor="black", boxstyle="round,pad=0.4"),
@@ -178,8 +176,8 @@ for i, lll in enumerate(lambdas):
     ax.tick_params(bottom=True, top=True, left=True, right=True, which="both")
     ax.tick_params(axis="x", which="both", direction="in")
     ax.tick_params(axis="y", which="both", direction="in")
-    ax.tick_params(which='major', length=5)
-    
+    ax.tick_params(which="major", length=5)
+
     im = ax.matshow(
         potential,
         extent=[0.0, kmax, kmax, 0.0],
@@ -222,7 +220,8 @@ for i, lll in enumerate(lambdas):
         # ax.tick_params(axis="y", which="both", left=False)
     else:
         ax.text(
-            4.3, 1.1,
+            4.3,
+            1.1,
             "AV18",
             ha="right",
             bbox=dict(facecolor="white", edgecolor="black", boxstyle="round,pad=0.4"),
@@ -266,4 +265,3 @@ path = __file__.replace(".py", ".pdf").replace("scripts", "plots")
 pathlib.Path(path).parent.mkdir(parents=True, exist_ok=True)
 plt.savefig(path, dpi=300)
 plt.close(fig)
-

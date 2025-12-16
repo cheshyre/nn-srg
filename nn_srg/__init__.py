@@ -7,6 +7,7 @@ Provides:
         directories
 
 """
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -18,4 +19,4 @@ from nn_srg import diagonalize
 from nn_srg import phase_shift
 from nn_srg import constants
 
-__all__ = ['srg', 'potential', 'diagonalize', 'phase_shift', 'constants']
+__all__ = ["srg", "potential", "diagonalize", "phase_shift", "constants"]

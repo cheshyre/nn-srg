@@ -1,5 +1,5 @@
 # Copyright (c) 2025 Matthias Heinz
-# 
+#
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
@@ -18,4 +18,3 @@ srg = SRG(pot)
 srg.evolve(1.8, verbose=True)
 
 fast_and_lazy_plot(srg.get_potential(), 2.0)
-

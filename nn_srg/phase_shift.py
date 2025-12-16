@@ -14,7 +14,70 @@ M = nucleon_mass
 eps = 1e-3
 
 
-def fix_large_E(vals):
+def compute_phase_shifts_single_channel(pot: Potential):
+    Nrows = len(pot.nodes)
+
+    K = _compute_K_matrix(
+        pot.without_weights(), Nrows, np.max(pot.nodes) + 1.0, pot.nodes, pot.weights
+    )
+
+    ps = [
+        _compute_phase_shift_single_point(K, i, pot.nodes) for i in range(len(pot.nodes))
+    ]
+    Es = [convert_p_to_Elab(p) for p in pot.nodes]
+
+    ps = _fix_boundary_conditions_and_discontinuities(ps)
+
+    return np.array(Es), np.array(ps)
+
+
+def compute_phase_shifts_coupled_channel(pot: CoupledPotential):
+
+    V00 = pot.extract_channel_potential(pot._channels[0])
+    V01 = pot.extract_channel_potential(pot._channels[1])
+    V10 = pot.extract_channel_potential(pot._channels[2])
+    V11 = pot.extract_channel_potential(pot._channels[3])
+
+    Nrows = len(V00.nodes)
+
+    K = _compute_K_matrix_coupled(
+        V00.without_weights(),
+        V01.without_weights(),
+        V10.without_weights(),
+        V11.without_weights(),
+        Nrows,
+        np.max(pot.nodes) + 1.0,
+        pot.nodes,
+        pot.weights,
+    )
+
+    ps = [
+        _compute_phase_shifts_coupled_single_point(K, i, pot.nodes, Nrows)
+        for i in range(Nrows)
+    ]
+    ps0 = np.array([x[0] for x in ps])
+    ps1 = np.array([x[1] for x in ps])
+    angle = [x[2] for x in ps]
+    Es = [convert_p_to_Elab(p) for p in pot.nodes[:Nrows]]
+
+    ps0 = _fix_boundary_conditions_and_discontinuities(ps0)
+    ps1 = _fix_boundary_conditions_and_discontinuities(ps1)
+
+    return np.array(Es), np.array(ps0), np.array(ps1), np.array(angle)
+
+
+def convert_p_to_Elab(p):
+    return 2 * p**2 * hbarc**2 / M
+
+
+def convert_Elab_to_p(E):
+    return np.sqrt(M * E / 2 / hbarc**2)
+
+
+# ------------ Internal methods ---------------- #
+
+
+def _fix_large_E(vals):
     large_E_val = vals[-1]
     while large_E_val > 30 or large_E_val < -30:
         shift = 0
@@ -27,14 +90,14 @@ def fix_large_E(vals):
     return vals
 
 
-def has_discont(vals):
+def _has_discont(vals):
     for i in reversed(range(1, len(vals))):
         if np.abs(vals[i] - vals[i - 1]) > 90:
             return True
     return False
 
 
-def fix_one_disc(vals):
+def _fix_one_disc(vals):
     for i in reversed(range(1, len(vals))):
         if np.abs(vals[i] - vals[i - 1]) > 90:
             if vals[i - 1] < vals[i]:
@@ -47,75 +110,24 @@ def fix_one_disc(vals):
     return vals
 
 
-def fix_boundary_conditions_and_discontinuities(vals):
-    vals = fix_large_E(vals)
+def _fix_boundary_conditions_and_discontinuities(vals):
+    vals = _fix_large_E(vals)
 
-    while has_discont(vals):
-        vals = fix_one_disc(vals)
+    while _has_discont(vals):
+        vals = _fix_one_disc(vals)
 
     return vals
 
 
-def compute_phase_shifts_coupled_channel(pot: CoupledPotential):
-
-    V00 = pot.extract_channel_potential(pot._channels[0])
-    V01 = pot.extract_channel_potential(pot._channels[1])
-    V10 = pot.extract_channel_potential(pot._channels[2])
-    V11 = pot.extract_channel_potential(pot._channels[3])
-
-    Nrows = len(V00.nodes)
-
-    K = compute_K_matrix_coupled(
-        V00.without_weights(),
-        V01.without_weights(),
-        V10.without_weights(),
-        V11.without_weights(),
-        Nrows,
-        np.max(pot.nodes) + 1.0,
-        pot.nodes,
-        pot.weights,
-    )
-
-    ps = [
-        compute_phase_shifts_coupled_single_point(K, i, pot.nodes, Nrows)
-        for i in range(Nrows)
-    ]
-    ps0 = np.array([x[0] for x in ps])
-    ps1 = np.array([x[1] for x in ps])
-    angle = [x[2] for x in ps]
-    Es = [Elab(p) for p in pot.nodes[:Nrows]]
-
-    ps0 = fix_boundary_conditions_and_discontinuities(ps0)
-
-    return np.array(Es), np.array(ps0), np.array(ps1), np.array(angle)
-
-
-def compute_phase_shifts_single_channel(pot: Potential):
-    Nrows = len(pot.nodes)
-
-    K = compute_K_matrix(
-        pot.without_weights(), Nrows, np.max(pot.nodes) + 1.0, pot.nodes, pot.weights
-    )
-
-    ps = [
-        compute_phase_shift_single_point(K, i, pot.nodes) for i in range(len(pot.nodes))
-    ]
-    Es = [Elab(p) for p in pot.nodes]
-
-    return np.array(Es), np.array(ps)
-
-
-# computation of phase shifts in uncoupled channels
-def counterterm(pmax, pole):
+def _counterterm(pmax, pole):
     return np.arctanh(pole / pmax) / pole
 
 
-def compute_phase_shift_single_point(K, i, mesh_points):
+def _compute_phase_shift_single_point(K, i, mesh_points):
     return 180.0 / np.pi * np.arctan(-mesh_points[i] * K[i, i])
 
 
-# note that ambiguity regarding the brach of arctan exists, make sure that solution is continuous as a function of energy
-def compute_phase_shifts_coupled_single_point(K, i, mesh_points, Nrows):
+def _compute_phase_shifts_coupled_single_point(K, i, mesh_points, Nrows):
     epsilon = np.arctan(2 * K[i, i + Nrows] / (K[i, i] - K[i + Nrows, i + Nrows])) / 2.0
     r_epsilon = (K[i, i] - K[i + Nrows, i + Nrows]) / (np.cos(2 * epsilon))
     delta_a = -np.arctan(
@@ -151,22 +163,14 @@ def compute_phase_shifts_coupled_single_point(K, i, mesh_points, Nrows):
     return (delta_1, delta_2, epsilonbar)
 
 
-def delta(i, j):
+def _delta(i, j):
     if i == j:
         return 1
     else:
         return 0
 
 
-def Elab(p):
-    return 2 * p**2 * hbarc**2 / M
-
-
-def mom(E):
-    return np.sqrt(M * E / 2 / hbarc**2)
-
-
-def compute_K_matrix(V, Nrows, pmax, mesh_points, mesh_weights):
+def _compute_K_matrix(V, Nrows, pmax, mesh_points, mesh_weights):
     A = np.zeros([Nrows + 1, Nrows + 1], float)
     K = np.zeros([Nrows, Nrows], float)
 
@@ -175,7 +179,7 @@ def compute_K_matrix(V, Nrows, pmax, mesh_points, mesh_weights):
 
         for i in range(Nrows):
             for j in range(Nrows):
-                A[i, j] = delta(i, j) - 2.0 / np.pi * mesh_weights[j] * V[
+                A[i, j] = _delta(i, j) - 2.0 / np.pi * mesh_weights[j] * V[
                     i, j
                 ] * mesh_points[j] ** 2 / (pole**2 - mesh_points[j] ** 2)
 
@@ -193,11 +197,11 @@ def compute_K_matrix(V, Nrows, pmax, mesh_points, mesh_weights):
                 / (pole**2 - mesh_points[i] ** 2)
             )
             A[i, Nrows] = (
-                +2.0 / np.pi * V[i, x] * pole**2 * (sum - counterterm(pmax, pole))
+                +2.0 / np.pi * V[i, x] * pole**2 * (sum - _counterterm(pmax, pole))
             )
 
         A[Nrows, Nrows] = 1 + 2.0 / np.pi * V[x, x] * pole**2 * (
-            sum - counterterm(pmax, pole)
+            sum - _counterterm(pmax, pole)
         )
 
         bvec = np.zeros([Nrows + 1], float)
@@ -213,7 +217,7 @@ def compute_K_matrix(V, Nrows, pmax, mesh_points, mesh_weights):
     return K
 
 
-def compute_K_matrix_coupled(
+def _compute_K_matrix_coupled(
     V00, V01, V10, V11, Nrows, pmax, mesh_points, mesh_weights
 ):
     A = np.zeros([2 * Nrows + 2, 2 * Nrows + 2], float)
@@ -224,7 +228,7 @@ def compute_K_matrix_coupled(
 
         for i in range(Nrows):
             for j in range(Nrows):
-                A[i, j] = delta(i, j) - 2.0 / np.pi * mesh_weights[j] * V00[
+                A[i, j] = _delta(i, j) - 2.0 / np.pi * mesh_weights[j] * V00[
                     i, j
                 ] * mesh_points[j] ** 2 / (pole**2 - mesh_points[j] ** 2)
                 A[i, j + Nrows] = (
@@ -243,7 +247,7 @@ def compute_K_matrix_coupled(
                     * mesh_points[j] ** 2
                     / (pole**2 - mesh_points[j] ** 2)
                 )
-                A[i + Nrows, j + Nrows] = delta(i, j) - 2.0 / np.pi * mesh_weights[
+                A[i + Nrows, j + Nrows] = _delta(i, j) - 2.0 / np.pi * mesh_weights[
                     j
                 ] * V11[i, j] * mesh_points[j] ** 2 / (pole**2 - mesh_points[j] ** 2)
 
@@ -261,7 +265,7 @@ def compute_K_matrix_coupled(
                 / (pole**2 - mesh_points[i] ** 2)
             )
             A[i, 2 * Nrows] = (
-                +2.0 / np.pi * V00[i, x] * pole**2 * (sum - counterterm(pmax, pole))
+                +2.0 / np.pi * V00[i, x] * pole**2 * (sum - _counterterm(pmax, pole))
             )
 
             A[2 * Nrows, i + Nrows] = (
@@ -273,7 +277,7 @@ def compute_K_matrix_coupled(
                 / (pole**2 - mesh_points[i] ** 2)
             )
             A[i, 2 * Nrows + 1] = (
-                +2.0 / np.pi * V01[i, x] * pole**2 * (sum - counterterm(pmax, pole))
+                +2.0 / np.pi * V01[i, x] * pole**2 * (sum - _counterterm(pmax, pole))
             )
 
             A[2 * Nrows + 1, i] = (
@@ -285,7 +289,7 @@ def compute_K_matrix_coupled(
                 / (pole**2 - mesh_points[i] ** 2)
             )
             A[i + Nrows, 2 * Nrows] = (
-                +2.0 / np.pi * V10[i, x] * pole**2 * (sum - counterterm(pmax, pole))
+                +2.0 / np.pi * V10[i, x] * pole**2 * (sum - _counterterm(pmax, pole))
             )
 
             A[2 * Nrows + 1, i + Nrows] = (
@@ -297,20 +301,20 @@ def compute_K_matrix_coupled(
                 / (pole**2 - mesh_points[i] ** 2)
             )
             A[i + Nrows, 2 * Nrows + 1] = (
-                +2.0 / np.pi * V11[i, x] * pole**2 * (sum - counterterm(pmax, pole))
+                +2.0 / np.pi * V11[i, x] * pole**2 * (sum - _counterterm(pmax, pole))
             )
 
         A[2 * Nrows, 2 * Nrows] = 1 + 2.0 / np.pi * V00[x, x] * pole**2 * (
-            sum - counterterm(pmax, pole)
+            sum - _counterterm(pmax, pole)
         )
         A[2 * Nrows, 2 * Nrows + 1] = (
-            +2.0 / np.pi * V01[x, x] * pole**2 * (sum - counterterm(pmax, pole))
+            +2.0 / np.pi * V01[x, x] * pole**2 * (sum - _counterterm(pmax, pole))
         )
         A[2 * Nrows + 1, 2 * Nrows] = (
-            +2.0 / np.pi * V10[x, x] * pole**2 * (sum - counterterm(pmax, pole))
+            +2.0 / np.pi * V10[x, x] * pole**2 * (sum - _counterterm(pmax, pole))
         )
         A[2 * Nrows + 1, 2 * Nrows + 1] = 1 + 2.0 / np.pi * V11[x, x] * pole**2 * (
-            sum - counterterm(pmax, pole)
+            sum - _counterterm(pmax, pole)
         )
 
         bvec = np.zeros([2 * Nrows + 2, 2], float)

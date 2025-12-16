@@ -1,10 +1,10 @@
-# nn_srg
+# nn-srg
 
 Similarity Renormalization Group (SRG) evolution for nucleon-nucleon interactions in momentum space.
 
 ## Overview
 
-`nn_srg` provides tools for loading, manipulating, and evolving nucleon-nucleon potentials using the Similarity Renormalization Group method. The package handles both uncoupled and coupled-channel potentials with support for standard momentum-space representations.
+`nn-srg` provides tools for loading, manipulating, and evolving nucleon-nucleon potentials using the Similarity Renormalization Group method. The package handles both uncoupled and coupled-channel potentials with support for standard momentum-space representations.
 
 **Key Features:**
 - Load nucleon-nucleon potentials (AV18, EM500) in partial wave channels

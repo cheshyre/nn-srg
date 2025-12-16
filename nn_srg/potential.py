@@ -1,114 +1,85 @@
-# pylint: disable=too-many-lines
+# Copyright (c) 2018-2025 Matthias Heinz
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
 """Nuclear potential module.
 
-Module containing representations of 3D potentials for use in nuclear theory.
-Also contains logic to read them from and save them to files with a standard
+Module containing representations of 3D nucleon-nucleon potentials.
+
+Also contains logic to read potentials from and save them to files with a standard
 naming convention.
 
-class Channel
--------------
-A container for the channel information for a potential. It has the following
-method::
-
-    channel = Channel(spin, orb_ang_mom_1, orb_ang_mom_2, tot_ang_mom, isospin)
-
-These are also commonly read as S, L, L, J, and T.
-
-class CoupledChannel
---------------------
-A container to handle coupled channels. It has the following method::
-
-    channel = CoupledChannel(list_of_channels)
-
-All channels in coupled channel should have same S, J, and T.
-
-class PotentialType
--------------------
-A container class to hold all the physical information about the potential. It
-has the following method::
-
-    potential_type = PotentialType(name, channel, particles)
-
-class Potential
----------------
-Abstraction for the representation of a potential. Handles the logic of adding
-and removing weights. Can generate corresponding kinetic energy. It has the
-following methods::
-
-    potential = Potential(potential_type, nodes, weights, potential, lam=50.0,
-                          has_weights=False)
-    kinetic_energy = potential.kinetic_energy()
-    potential_data_wo_weights = potential.without_weights()
-    potential_data_w_weights = potential.with_weights()
-    new_potential = potential.copy(potential_data, lam)
-    reduced_potential = potential.reduce_dim(dim)
-
-class CoupledPotential
-----------------------
-Abstraction for representation for potential of coupled channel. Handles logic
-of adding and removing weights. Can generate kinetic energy. It has the
-following methods::
-
-    potential = CoupledPotential([potential1, potential2, potential3,
-                                  potential4])
-    kinetic_energy = potential.kinetic_energy()
-    potential_data_wo_weights = potential.without_weights()
-    potential_data_w_weights = potential.with_weights()
-    new_potential = potential.copy(potential_data, lam)
-    reduced_potential = potential.reduce_dim(dim)
-    channel_potential = potential.extract_channel_potential(
-        potential1.potential_type.channel
-    )
-
-Methods
+Classes
 -------
-potential = load_from_file(file_str)
+Channel
+    A container for the channel information for a potential. It has the following
+    method::
 
-Method to load a potential from a file. Requires that standard file-naming
-conventions have been followed.
+        channel = Channel(spin, orb_ang_mom_1, orb_ang_mom_2, tot_ang_mom, isospin)
 
-potential = load(n_body, order, name, channel, lambda, particles,
-                 num_points='*')
+    These are also commonly read as S, L, L', J, and T.
 
-Method to load potential from a standard directory. Requires that potential was
-saved there earlier.
+CoupledChannel
+    A container to handle coupled channels. It has the following method::
 
-save(potential, directory=None)
+        channel = CoupledChannel(list_of_channels)
 
-Method to save potential with correct naming convention either to a standard
-folder or to a user-specified directory.
+    All channels in coupled channel should have same S, J, and T.
 
-Changelog:
+PotentialType
+    A container class to hold all the physical information about the potential. It
+    has the following method::
 
-2018.11.14
-    Added:
-        CoupledChannel for coupled channels
-        CoupledPotential for potentials in coupled channels
+        potential_type = PotentialType(name, channel, particles)
 
-2018.11.09
-    Added:
-        load_from_file method
-    Changed:
-        Make load take parameters and use load_from_file for loading from a
-        specific file
-        Save now has different parameter ordering with the dir_str param being
-        optional
+Potential
+    Abstraction for the representation of a potential. Handles the logic of adding
+    and removing weights. Can generate corresponding kinetic energy. It has the
+    following methods::
 
-2018.11.06
-    Added:
-        Initial creation of module
+        potential = Potential(potential_type, nodes, weights, potential, lam=50.0,
+                              has_weights=False)
+        kinetic_energy = potential.kinetic_energy()
+        potential_data_wo_weights = potential.without_weights()
+        potential_data_w_weights = potential.with_weights()
+        new_potential = potential.copy(potential_data, lam)
+        reduced_potential = potential.reduce_dim(dim)
+
+CoupledPotential
+    Abstraction for representation for potential of coupled channel. Handles logic
+    of adding and removing weights. Can generate kinetic energy. It has the
+    following methods::
+
+        potential = CoupledPotential([potential1, potential2, potential3,
+                                      potential4])
+        kinetic_energy = potential.kinetic_energy()
+        potential_data_wo_weights = potential.without_weights()
+        potential_data_w_weights = potential.with_weights()
+        new_potential = potential.copy(potential_data, lam)
+        reduced_potential = potential.reduce_dim(dim)
+        channel_potential = potential.extract_channel_potential(
+            potential1.potential_type.channel
+        )
+
+Functions
+---------
+load_from_file(file_str, name, channel, particles, lam=None)
+    Load a potential from a file. Requires that standard file-naming
+    conventions have been followed.
+
+load_1S0_potential(name)
+    Load the ¹S₀ (spin-singlet, S-wave) nucleon-nucleon potential.
+
+load_3S1_3D1_potential(name)
+    Load the coupled ³S₁-³D₁ (spin-triplet, coupled S-D wave) potential.
+
+fast_and_lazy_plot(potential, v_scale=1.0)
+    Quick visualization of a potential matrix with colorbar.
 
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
-import glob
-from math import pi
-from math import sqrt
+from math import pi, sqrt
 import os
-import re
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -117,24 +88,36 @@ STANDARD_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "potent
 
 
 class Channel:
-    """Container for information on channel for potential."""
+    """Container for information on channel for potential.
 
-    # pylint: disable=too-many-arguments
-    def __init__(self, spin, orb_ang_mom_1, orb_ang_mom_2, tot_ang_mom, isospin):
+    A channel is defined by the quantum numbers S (spin),
+    L (outgoing relative orbital angular momentum),
+    L' (incoming relative orbital angular momentum),
+    J (total angular momentum), and T (isospin).
+    """
+
+    def __init__(
+        self,
+        spin: int,
+        orb_ang_mom_1: int,
+        orb_ang_mom_2: int,
+        tot_ang_mom: int,
+        isospin: int,
+    ):
         """Create Channel object.
 
         Parameters
         ----------
         spin : int
-            Spin quantum number.
+            Spin quantum number S.
         orb_ang_mom_1 : int
-            First angular momentum quantum number.
+            Outgoing relative orbital angular momentum quantum number L.
         orb_ang_mom_2 : int
-            Second angular momentum quantum number.
+            Incoming relative orbital angular momentum quantum number L'.
         tot_ang_mom : int
-            Total angular momentum.
+            Total angular momentum J.
         isospin : int
-            2-body isospin quantum number.
+            2-body isospin quantum number T.
 
         """
         self._spin = spin
@@ -143,32 +126,37 @@ class Channel:
         self._j = tot_ang_mom
         self._isospin = isospin
 
-    def as_5tuple(self):
+    def as_5tuple(self) -> Tuple[int, int, int, int, int]:
         """Return 5-tuple representation of channel.
 
         Returns
         -------
-        (int, int, int, int, int)
-            5-tuple with channel quantum numbers.
+        tuple of int
+            5-tuple with channel quantum numbers (S, L, L', J, T).
 
         """
         return (self._spin, self._l1, self._l2, self._j, self._isospin)
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return string representation of channel.
 
         Returns
         -------
         str
-            String of 5 integers with channel information which are SLLJT.
+            String of 5 integers with channel information in format SLLJT.
 
         """
         return "{}{}{}{}{}".format(
             self._spin, self._l1, self._l2, self._j, self._isospin
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         """Return whether channel is same as another channel object.
+
+        Parameters
+        ----------
+        other : Channel
+            Channel object to compare with.
 
         Returns
         -------
@@ -178,28 +166,43 @@ class Channel:
         """
         return self.as_5tuple() == other.as_5tuple()
 
-    def __ne__(self, other):
+    def __ne__(self, other) -> bool:
         """Return whether channel is different from another channel object.
+
+        Parameters
+        ----------
+        other : Channel
+            Channel object to compare with.
 
         Returns
         -------
         bool
-            False if self and other are the same, False otherwise.
+            True if channels are different, False otherwise.
 
         """
         return self.as_5tuple() != other.as_5tuple()
 
 
 class CoupledChannel(Channel):
-    """Container for information about coupled channel."""
+    """Container for information about coupled channel.
 
-    def __init__(self, list_of_channels):
+    A coupled channel consists of multiple channels that are coupled together,
+    typically arising from tensor forces. All channels must share the same
+    spin S, total angular momentum J, and isospin T.
+    """
+
+    def __init__(self, list_of_channels: List[Channel]):
         """Create coupled channel container.
 
         Parameters
         ----------
-        list_of_channels : list of Channel objects
-            List of channels in coupled channel.
+        list_of_channels : list of Channel
+            List of Channel objects in coupled channel.
+
+        Raises
+        ------
+        ValueError
+            If channels cannot be coupled (different S, J, or T values).
 
         """
         spins = {x.as_5tuple()[0] for x in list_of_channels}
@@ -213,18 +216,24 @@ class CoupledChannel(Channel):
         self._channels = list_of_channels
 
     @property
-    def channels(self):
+    def channels(self) -> List[Channel]:
         """Return list of channels in coupled channel.
 
         Returns
         -------
-        list of Channel objects
+        list of Channel
+            List of Channel objects comprising the coupled channel.
 
         """
         return self._channels
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         """Return whether coupled channel object is same as another.
+
+        Parameters
+        ----------
+        other : CoupledChannel
+            CoupledChannel object to compare with.
 
         Returns
         -------
@@ -234,8 +243,13 @@ class CoupledChannel(Channel):
         """
         return False not in {x == y for x, y in zip(self.channels, other.channels)}
 
-    def __ne__(self, other):
+    def __ne__(self, other) -> bool:
         """Return whether coupled channel object is not same as another.
+
+        Parameters
+        ----------
+        other : CoupledChannel
+            CoupledChannel object to compare with.
 
         Returns
         -------
@@ -247,20 +261,25 @@ class CoupledChannel(Channel):
 
 
 class PotentialType:
-    """Container for information related to potential."""
+    """Container for information related to potential.
 
-    # pylint: disable=too-many-arguments
-    def __init__(self, name, channel, particles):
+    Stores metadata about a potential including its name, channel information,
+    and constituent particles.
+    """
+
+    def __init__(
+        self, name: str, channel: Union[Channel, CoupledChannel], particles: str
+    ):
         """Construct potential type.
 
         Parameters
         ----------
         name : str
-            Name for potential, may reflect something about origin.
-        channel: Channel
+            Name for potential, may reflect something about origin (e.g., 'EM500', 'AV18').
+        channel : Channel or CoupledChannel
             Object representing the partial wave channel for the potential.
-        particles: str
-            String representing constituent particles in the interaction.
+        particles : str
+            String representing constituent particles in the interaction (e.g., 'np', 'nn', 'pp').
 
         """
         self._name = name
@@ -268,7 +287,7 @@ class PotentialType:
         self._particles = particles
 
     @property
-    def name(self):
+    def name(self) -> str:
         """Return name of potential.
 
         Returns
@@ -280,88 +299,76 @@ class PotentialType:
         return self._name
 
     @property
-    def channel(self):
-        """Return partial wave channel of potential.
+    def channel(self) -> Union[Channel, CoupledChannel]:
+        """Return channel of potential.
 
         Returns
         -------
-        Channel
-            Channel object representing partial wave channel.
+        Channel or CoupledChannel
+            Channel information for the potential.
 
         """
         return self._channel
 
     @property
-    def particles(self):
-        """Return particles in interaction to which potential applies.
+    def particles(self) -> str:
+        """Return particles in potential.
 
         Returns
         -------
         str
-            String with particles in interaction.
+            String representing constituent particles.
 
         """
         return self._particles
 
-    def __eq__(self, other):
-        """Return whether potential type is same as other potential type.
-
-        Returns
-        -------
-        bool
-            True if same, False otherwise.
-
-        """
-        return (
-            (self.n_body == other.n_body)
-            and (self.order == other.order)
-            and (self.name == other.name)
-            and (self.channel == other.channel)
-            and (self.particles == other.particles)
-        )
-
-    def __ne__(self, other):
-        """Return whether potential type is not same as other potential type.
-
-        Returns
-        -------
-        bool
-            False if same, True otherwise.
-
-        """
-        return not (
-            (self.n_body == other.n_body)
-            and (self.order == other.order)
-            and (self.name == other.name)
-            and (self.channel == other.channel)
-            and (self.particles == other.particles)
-        )
-
 
 class Potential:
-    """Class encapsulating all relevant information about a potential."""
+    """Abstraction for representation of a potential.
 
-    # pylint: disable=too-many-arguments
+    Handles momentum-space potentials with Gaussian quadrature weights.
+    The potential can be stored in weighted or unweighted form, where
+    weighted means the Gaussian quadrature weights and momentum factors
+    are included in the matrix elements.
+
+    Attributes
+    ----------
+    potential_type : PotentialType
+        Metadata about the potential.
+    nodes : array_like
+        Momentum grid points (in fm⁻¹).
+    weights : array_like
+        Gaussian quadrature weights.
+    lam : float
+        SRG flow parameter λ (in fm⁻¹). Default 50.0 indicates unevolved potential.
+    """
+
     def __init__(
-        self, potential_type, nodes, weights, potential, lam=50.0, has_weights=False
+        self,
+        potential_type: PotentialType,
+        nodes: np.ndarray,
+        weights: np.ndarray,
+        potential: np.ndarray,
+        lam: float = 50.0,
+        has_weights: bool = False,
     ):
-        """Create potential from parameters.
+        """Create potential.
 
         Parameters
         ----------
         potential_type : PotentialType
-            PotentialType instance with information about the potential.
-        nodes : list of floats
-            List of momenta at which the potential is defined.
-        weights : list of floats
-            List of integration weights corresponding to nodes.
-        potential : matrix of floats
-            Value of potential at incoming and outgoing momenta in nodes.
+            Object with information about potential.
+        nodes : array_like
+            Momentum nodes for Gaussian quadrature (in fm⁻¹).
+        weights : array_like
+            Weights for Gaussian quadrature.
+        potential : array_like
+            2D array with potential matrix elements.
         lam : float, optional
-            Value of lambda (SRG flow parameter) for potential. For unevolved
-            potentials, a value of 50 is the default.
+            SRG flow parameter λ (in fm⁻¹). Default is 50.0, representing
+            an unevolved potential.
         has_weights : bool, optional
-            Specifies whether potential given has weights factored in already.
+            Whether potential matrix includes quadrature weights. Default is False.
 
         """
         self._potential_type = potential_type
@@ -369,335 +376,279 @@ class Potential:
         self._weights = weights
         self._lam = lam
         if has_weights:
-            potential = _rem_w(potential, self._weights, self._nodes)
-        self._potential = potential
+            self._w_potential = potential
+        else:
+            self._w_potential = _add_w(potential, weights, nodes)
 
-    def copy(self, potential, lam):
-        """Create potential from current potential with new data and lam.
-
-        Parameters
-        ----------
-        potential : matrix of floats
-            Potential data.
-        lam : float
-            Value of lambda
-
-        Returns
-        -------
-        Potential
-            New potential with new data.
-
-        """
-        return Potential(
-            self._potential_type, self._nodes, self._weights, potential, lam
-        )
-
-    def with_weights(self):
-        """Return potential with weights factored in (for calculations).
-
-        Returns
-        -------
-        matrix of floats
-            Potential with integration weights.
-
-        """
-        return _add_w(self._potential, self._weights, self._nodes)
-
-    def without_weights(self):
-        """Return potential without weights (for visualization).
-
-        Returns
-        -------
-        matrix of floats
-            Potential without integration weights.
-
-        """
-        return np.array(self._potential)
-
-    def reduce_dim(self, dim):
-        """Return new potential with only `dim` lowest energy states.
-
-        Parameters
-        ----------
-        dim : int
-            Dimension to which potential is to be reduced.
-
-        Returns
-        -------
-        Potential
-            New reduced dimension potential.
-
-        Raises
-        ------
-        ValueError
-            When value for new dim is too small or too large.
-
-        """
-        if dim >= len(self.nodes):
-            raise ValueError("Value of dim is not smaller than current dim.")
-        if dim <= 0:
-            raise ValueError("Zero or negative dim is not allowed.")
-
-        new_data = self._potential[np.ix_(list(range(dim)), list(range(dim)))]
-        new_nodes = self._nodes[:dim]
-        new_weights = self._weights[:dim]
-
-        return Potential(
-            self._potential_type, new_nodes, new_weights, new_data, self._lam
-        )
-
-    def kinetic_energy(self):
-        """Return kinetic energy for potential (for calculations).
-
-        Returns
-        -------
-        matrix of floats
-            Kinetic energy matrix.
-
-        """
-        return np.diag(np.array([p**2 for p in self._nodes]))
-
-    def __eq__(self, other):
-        """Return whether two potentials are equal to with numerical error.
-
-        Returns
-        -------
-        bool
-            True when potential type, nodes, weights, potential, and lam are
-            all equal within epsilon, False otherwise.
-
-        """
-        # Numerical errors smaller than this are acceptable
-        # If there is something wrong with the physics, it should produce
-        # errors larger than this.
-        eps = 10 ** (-4)
-
-        if self.potential_type != other.potential_type:
-            return False
-        if self.dim != other.dim:
-            return False
-        if abs(self.lam - other.lam) > eps:
-            return False
-        for p_self, p_other, w_self, w_other in zip(
-            self.nodes, other.nodes, self.weights, other.weights
-        ):
-            if abs(p_self - p_other) > eps or abs(w_self - w_other) > eps:
-                return False
-        for i in range(self.dim):
-            for j in range(self.dim):
-                diff = abs(self.without_weights()[i][j] - other.without_weights()[i][j])
-                if diff > eps:
-                    return False
-        return True
-
-    def __ne__(self, other):
-        """Return whether two potentials are not equal to with numerical error.
-
-        Returns
-        -------
-        bool
-            False when potential type, nodes, weights, potential, and lam are
-            all equal within epsilon, True otherwise.
-
-        """
-        # Numerical errors smaller than this are acceptable
-        # If there is something wrong with the physics, it should produce
-        # errors larger than this.
-        eps = 10 ** (-4)
-
-        if self.potential_type != other.potential_type:
-            return True
-        if self.dim != other.dim:
-            return True
-        if abs(self.lam - other.lam) > eps:
-            return True
-        for p_self, p_other, w_self, w_other in zip(
-            self.nodes, other.nodes, self.weights, other.weights
-        ):
-            if abs(p_self - p_other) > eps or abs(w_self - w_other) > eps:
-                return True
-        for i in range(self.dim):
-            for j in range(self.dim):
-                diff = abs(self.without_weights()[i][j] - other.without_weights()[i][j])
-                if diff > eps:
-                    return True
-        return False
+        self._w_dim = len(weights)
 
     @property
-    def dim(self):
-        """Return the dimension of the potential matrix.
-
-        Returns
-        -------
-        int
-            The dimension of the (square) potential matrix.
-
-        """
-        return len(self._nodes)
-
-    @property
-    def potential_type(self):
-        """Return `PotentialType` object for potential.
+    def potential_type(self) -> PotentialType:
+        """Return potential type.
 
         Returns
         -------
         PotentialType
-            Object with all physics related information for the potential.
+            Metadata about the potential.
 
         """
         return self._potential_type
 
     @property
-    def nodes(self):
-        """Return the nodes for the potential.
+    def nodes(self) -> np.ndarray:
+        """Return momentum nodes.
 
         Returns
         -------
-        list of floats
-            List of momenta at which potential is defined.
+        ndarray
+            Momentum grid points (in fm⁻¹).
 
         """
         return self._nodes
 
     @property
-    def weights(self):
-        """Return weights for the potential.
+    def weights(self) -> np.ndarray:
+        """Return quadrature weights.
 
         Returns
         -------
-        list of floats
-            Integration weights corresponding to nodes for potential.
+        ndarray
+            Gaussian quadrature weights.
 
         """
         return self._weights
 
     @property
-    def lam(self):
-        """Return lambda for potential.
+    def lam(self) -> float:
+        """Return SRG flow parameter.
 
         Returns
         -------
         float
-            Value of lambda, the SRG flow parameter, for potential.
+            SRG flow parameter λ (in fm⁻¹).
 
         """
         return self._lam
 
-
-class CoupledPotential(Potential):
-    """Representation of potential of coupled channel."""
-
-    def __init__(self, list_of_potentials):  # pylint: disable=too-many-locals
-        """Create potential from list of potentials in a coupled channel.
-
-        Parameters
-        ----------
-        list_of_potentials : list of Potential objects
-            List of potentials to form coupled channel.
+    def kinetic_energy(self) -> np.ndarray:
+        """Generate kinetic energy matrix.
 
         Returns
         -------
-        Potential
-            New potential with full coupled channel.
+        ndarray
+            Diagonal matrix with kinetic energy values T = p²/(2μ),
+            where μ is the reduced mass (assuming m_nucleon/2).
 
         """
-        self._construction = list_of_potentials
-        channels = [x.potential_type.channel for x in list_of_potentials]
-        name = {x.potential_type.name for x in list_of_potentials}
-        particles = {x.potential_type.particles for x in list_of_potentials}
-        if len(name) * len(particles) != 1:
-            raise ValueError("Given potentials cannot be coupled.")
-        coupled_channel = CoupledChannel(channels)
-        potential_type = PotentialType(name.pop(), coupled_channel, particles.pop())
-        lam = {x.lam for x in list_of_potentials}
-        if len(lam) != 1:
-            raise ValueError("Not all given potentials are at the same lam.")
-        lam = lam.pop()
-        dim = {x.dim for x in list_of_potentials}
-        if len(dim) != 1:
-            raise ValueError("Not all given potentials have same dim.")
-        dim = dim.pop()
-        c_dim = int(sqrt(len(list_of_potentials)))
-        if c_dim**2 != len(list_of_potentials):
-            raise ValueError("Non-square number of potentials given.")
-        nodes = []
-        weights = []
-        for pot in list_of_potentials[:c_dim]:
-            nodes += pot.nodes
-            weights += pot.weights
-        nodes = np.array(nodes)
-        weights = np.array(weights)
-        potential_data = np.zeros((c_dim * dim, c_dim * dim))
-        self._channel_indexes = []
-        for i in range(c_dim):
-            for j in range(c_dim):
-                r_s = i * dim
-                r_e = (i + 1) * dim
-                c_s = j * dim
-                c_e = (j + 1) * dim
-                data = list_of_potentials[i * c_dim + j].without_weights()
-                potential_data[r_s:r_e, c_s:c_e] = data
-                self._channel_indexes.append((r_s, r_e, c_s, c_e))
-        super(CoupledPotential, self).__init__(
-            potential_type, nodes, weights, potential_data, lam
-        )
-        self._c_dim = c_dim
-        self._w_dim = dim
-        self._channels = channels
+        kinetic = np.diag([node**2 / 2 for node in self.nodes])
+        return _add_w(kinetic, self.weights, self.nodes)
 
-    def copy(self, potential, lam):
-        """Create potential from current potential with new data and lam.
+    def without_weights(self) -> np.ndarray:
+        """Return potential matrix without quadrature weights.
+
+        Returns
+        -------
+        ndarray
+            Unweighted potential matrix V(p, p').
+
+        """
+        return _rem_w(self._w_potential, self.weights, self.nodes)
+
+    def with_weights(self) -> np.ndarray:
+        """Return potential matrix with quadrature weights.
+
+        Returns
+        -------
+        ndarray
+            Weighted potential matrix for direct use in integration.
+
+        """
+        return self._w_potential
+
+    def copy(self, potential: np.ndarray, lam: float) -> "Potential":
+        """Create copy of potential with new matrix and flow parameter.
 
         Parameters
         ----------
-        potential : matrix of floats
-            Potential data.
+        potential : array_like
+            New potential matrix (without weights).
         lam : float
-            Value of lambda
+            New SRG flow parameter λ (in fm⁻¹).
 
         Returns
         -------
         Potential
-            New potential with new data.
+            New Potential object with updated matrix and λ.
 
         """
-        new_potentials = []
-        for pot, ranges in zip(self._construction, self._channel_indexes):
-            sub_matrix = _submatrix(potential, ranges)
-            new_potentials.append(pot.copy(sub_matrix, lam))
-        return CoupledPotential(new_potentials)
+        return Potential(
+            self.potential_type, self.nodes, self.weights, potential, lam, False
+        )
 
-    def reduce_dim(self, dim):
-        """Return new potential with only `dim` lowest energy states.
+    def reduce_dim(self, dim: int) -> "Potential":
+        """Reduce dimensionality of potential.
 
         Parameters
         ----------
         dim : int
-            Dimension to which potential is to be reduced.
+            New dimension (must be less than current dimension).
 
         Returns
         -------
         Potential
-            New reduced dimension potential.
+            Potential with reduced momentum grid.
+
+        """
+        return Potential(
+            self.potential_type,
+            self.nodes[:dim],
+            self.weights[:dim],
+            self.without_weights()[:dim, :dim],
+            self.lam,
+            False,
+        )
+
+    @property
+    def w_dim(self) -> int:
+        """Return weighted dimension of potential matrix.
+
+        The weighted dimension accounts for the Gaussian quadrature weights
+        used in momentum-space integration.
+
+        Returns
+        -------
+        int
+            Matrix dimension.
+
+        """
+        return self._w_dim
+
+
+class CoupledPotential:
+    """Abstraction for representation of coupled-channel potential.
+
+    Handles potentials in coupled channels.
+    The potential is represented as a block matrix with diagonal
+    and off-diagonal blocks.
+
+    For a coupled ³S₁-³D₁ channel, the structure is:
+        [ V_SS  V_SD ]
+        [ V_DS  V_DD ]
+    """
+
+    def __init__(self, potentials: List[Potential]):
+        """Create coupled potential.
+
+        Parameters
+        ----------
+        potentials : list of Potential
+            List of Potential objects representing different blocks.
+            For coupled S-D partial wave, order is [V_SS, V_SD, V_DS, V_DD].
 
         Raises
         ------
         ValueError
-            When value for new dim is too small or too large.
+            If potentials cannot be coupled (incompatible channels).
 
         """
-        if dim >= self._w_dim:
-            raise ValueError("Value of dim is not smaller than current dim.")
-        if dim <= 0:
-            raise ValueError("Zero or negative dim is not allowed.")
-        new_potentials = []
-        for pot, ranges in zip(self._construction, self._channel_indexes):
-            sub_matrix = _submatrix(self._potential, ranges)
-            new_potentials.append(pot.copy(sub_matrix, self._lam).reduce_dim(dim))
-        return CoupledPotential(new_potentials)
+        self._potentials = potentials
+        potential_type = potentials[0].potential_type
+        if not isinstance(potential_type.channel, CoupledChannel):
+            raise ValueError("Potentials are not in coupled channels.")
 
-    def extract_channel_potential(self, channel):
-        """Return potential corresponding to channel.
+    def kinetic_energy(self) -> np.ndarray:
+        """Generate kinetic energy matrix for coupled channel.
+
+        Returns
+        -------
+        ndarray
+            Block-diagonal kinetic energy matrix.
+
+        """
+        kinetics = [pot.kinetic_energy() for pot in self._potentials[::3]]
+        return np.block(
+            [[kinetics[0], 0 * kinetics[0]], [0 * kinetics[1], kinetics[1]]]
+        )
+
+    def without_weights(self) -> np.ndarray:
+        """Return potential matrix without quadrature weights.
+
+        Returns
+        -------
+        ndarray
+            Unweighted coupled potential matrix.
+
+        """
+        unweighted_pots = [pot.without_weights() for pot in self._potentials]
+        return np.block(
+            [
+                [unweighted_pots[0], unweighted_pots[1]],
+                [unweighted_pots[2], unweighted_pots[3]],
+            ]
+        )
+
+    def with_weights(self) -> np.ndarray:
+        """Return potential matrix with quadrature weights.
+
+        Returns
+        -------
+        ndarray
+            Weighted coupled potential matrix.
+
+        """
+        weighted_pots = [pot.with_weights() for pot in self._potentials]
+        return np.block(
+            [[weighted_pots[0], weighted_pots[1]], [weighted_pots[2], weighted_pots[3]]]
+        )
+
+    def copy(self, potential: np.ndarray, lam: float) -> "CoupledPotential":
+        """Create copy of coupled potential with new matrix and flow parameter.
+
+        Parameters
+        ----------
+        potential : array_like
+            New coupled potential matrix (without weights).
+        lam : float
+            New SRG flow parameter λ (in fm⁻¹).
+
+        Returns
+        -------
+        CoupledPotential
+            New CoupledPotential object with updated matrix and λ.
+
+        """
+        dim = len(self._potentials[0].nodes)
+        pots = [
+            self._potentials[i].copy(_submatrix(potential, ranges), lam)
+            for i, ranges in enumerate(
+                [
+                    (0, dim, 0, dim),
+                    (0, dim, dim, 2 * dim),
+                    (dim, 2 * dim, 0, dim),
+                    (dim, 2 * dim, dim, 2 * dim),
+                ]
+            )
+        ]
+        return CoupledPotential(pots)
+
+    def reduce_dim(self, dim: int) -> "CoupledPotential":
+        """Reduce dimensionality of coupled potential.
+
+        Parameters
+        ----------
+        dim : int
+            New dimension for each channel block.
+
+        Returns
+        -------
+        CoupledPotential
+            Coupled potential with reduced momentum grid.
+
+        """
+        return CoupledPotential([pot.reduce_dim(dim) for pot in self._potentials])
+
+    def extract_channel_potential(self, channel: Channel) -> Potential:
+        """Extract a specific channel potential from coupled potential.
 
         Parameters
         ----------
@@ -707,46 +658,57 @@ class CoupledPotential(Potential):
         Returns
         -------
         Potential
-            Potential corresponding to channel.
+            Potential for the specified channel.
+
+        Raises
+        ------
+        ValueError
+            If requested channel is not in coupled channel.
 
         """
-        for chan, potential, ranges in zip(
-            self._channels, self._construction, self._channel_indexes
-        ):
-            if channel == chan:
-                sub_matrix = _submatrix(self._potential, ranges)
-                return potential.copy(sub_matrix, self._lam)
-        raise ValueError("Channel not found.")
+        for pot in self._potentials:
+            if pot.potential_type.channel == channel:
+                return pot
+        raise ValueError("Could not find potential for channel.")
 
     @property
-    def dim(self):
-        """Return the dimension of single channel in the potential matrix.
+    def w_dim(self) -> int:
+        """Return weighted dimension of coupled potential matrix.
 
         Returns
         -------
         int
-            The dimension of a single channel in the (square) potential matrix.
+            Total matrix dimension (sum of individual channel dimensions).
 
         """
-        return self._w_dim
+        return self._potentials[0].w_dim * 2
 
 
-# pylint: disable=too-many-locals
-def load_from_file(file_str, name, channel, particles, lam=None):
+def load_from_file(
+    file_str: str,
+    name: str,
+    channel: Channel,
+    particles: str,
+    lam: Optional[float] = None,
+) -> Potential:
     """Load potential from file.
+
+    The file format should have nodes and weights listed first (one per line),
+    followed by the potential matrix elements.
 
     Parameters
     ----------
     file_str : str
-        String path to file with potential data.
+        Path to file with potential data.
     name : str
         Name for potential, may reflect something about origin.
-    channel: Channel
+    channel : Channel
         Object representing the partial wave channel for the potential.
-    particles: str
+    particles : str
         String representing constituent particles in the interaction.
-    lam: float
-        SRG lambda value of potential, default: None == unevolved
+    lam : float, optional
+        SRG flow parameter λ (in fm⁻¹). Default is None, which sets λ = 50.0
+        (effectively unevolved).
 
     Returns
     -------
@@ -754,15 +716,18 @@ def load_from_file(file_str, name, channel, particles, lam=None):
         Potential created from extracted information and data from file.
 
     """
-    # Parse info about potential from filename
-    # Read potential
+    # Default lambda for unevolved potential
     if lam is None:
         lam = 50.0
+
+    # Count number of nodes
     with open(file_str) as file:
         num_points = 0
         for line in file:
             if len(line.strip().split()) == 2:
                 num_points += 1
+
+    # Read nodes, weights, and potential matrix
     with open(file_str) as file:
         nodes = []
         weights = []
@@ -784,7 +749,28 @@ def load_from_file(file_str, name, channel, particles, lam=None):
     return Potential(potential_type, nodes, weights, potential, lam)
 
 
-def load_1S0_potential(name):
+def load_1S0_potential(name: str) -> Potential:
+    """Load the ¹S₀ nucleon-nucleon potential.
+
+    The ¹S₀ channel is the spin-singlet S-wave channel (S=0, L=0, J=0, T=1).
+
+    Parameters
+    ----------
+    name : str
+        Name of the potential (e.g., 'EM500', 'AV18').
+
+    Returns
+    -------
+    Potential
+        The loaded ¹S₀ potential object.
+
+    Examples
+    --------
+    >>> pot = load_1S0_potential('EM500')
+    >>> print(pot.lam)
+    50.0
+
+    """
     chan = Channel(spin=0, orb_ang_mom_1=0, orb_ang_mom_2=0, tot_ang_mom=0, isospin=1)
     chan_str = str(chan) + "_np"
     path = os.path.join(STANDARD_PATH, "NN", name, f"SLLJT_{chan_str}.dat")
@@ -792,15 +778,33 @@ def load_1S0_potential(name):
     return load_from_file(path, name, chan, "np")
 
 
-def load_3S1_3D1_potential(name):
+def load_3S1_3D1_potential(name: str) -> CoupledPotential:
+    """Load the coupled ³S₁-³D₁ nucleon-nucleon potential.
+
+    The ³S₁-³D₁ channel is the spin-triplet coupled S-D wave channel
+    (S=1, L=0,2, J=1, T=0). This coupling arises from the tensor force.
+
+    Parameters
+    ----------
+    name : str
+        Name of the potential (e.g., 'EM500', 'AV18').
+
+    Returns
+    -------
+    CoupledPotential
+        The loaded coupled ³S₁-³D₁ potential with blocks [V_SS, V_SD, V_DS, V_DD].
+
+    Examples
+    --------
+    >>> pot = load_3S1_3D1_potential('EM500')
+    >>> v_matrix = pot.without_weights()
+    >>> print(v_matrix.shape)
+    (200, 200)  # For 100 points per channel
+
+    """
     pot_list = []
 
-    for l1, l2 in [
-        (0, 0),
-        (0, 2),
-        (2, 0),
-        (2, 2),
-    ]:
+    for l1, l2 in [(0, 0), (0, 2), (2, 0), (2, 2)]:
         chan = Channel(
             spin=1, orb_ang_mom_1=l1, orb_ang_mom_2=l2, tot_ang_mom=1, isospin=0
         )
@@ -811,131 +815,17 @@ def load_3S1_3D1_potential(name):
     return CoupledPotential(pot_list)
 
 
-# # pylint: disable=too-many-arguments
-# def load(n_body, order, name, channel, lam, particles, num_points='*'):
-#     """Load potential based on parameters.
-
-#     Parameters
-#     ----------
-#      n_body : int
-#         Number of particles interacting in potential.
-#     order : int
-#         Order to which potential was calculated.
-#     name : str
-#         Name for potential, may reflect something about origin.
-#     channel: Channel or (int, int, int, int, int) or str
-#         Object representing the partial wave channel for the potential.
-#     lam : float
-#         Value of SRG flow parameter for potential.
-#     particles: str
-#         String representing constituent particles in the interaction.
-#     num_points : int, optional
-#         Number of points in potential. Should only be specified if multiple
-#         versions of same potential are saved and you need a specific one.
-#         Otherwise, will match the first one in lexicographical ordering.
-
-#     Returns
-#     -------
-#     Potential
-#         Potential created from extracted information and data from file.
-
-#     Raises
-#     ------
-#     FileNotFoundError
-#         If globbing doesn't match any files.
-
-#     """
-#     # Set up format string
-#     file_format_str = '{}/V{}_{}_{}_SLLJT_{}_lambda_{:.2f}_Np_{}_{}.dat'
-
-#     # Handle non-string formats
-#     if isinstance(channel, Channel):
-#         channel = str(channel)
-#     elif isinstance(channel, tuple):
-#         channel = ''.join(channel)
-
-#     dir_str = os.path.join(STANDARD_PATH, n_body_str,
-#                            'SLLJT_{}'.format(channel))
-
-#     # Create full file path string
-#     file_path = file_format_str.format(dir_str, n_body_str, order_str, name,
-#                                        channel, lam, num_points, particles)
-
-#     # Handle globbing
-#     if num_points == '*':
-#         try:
-#             file_path = glob.glob(file_path)[0]
-#         except IndexError:
-#             raise FileNotFoundError('No potential with those params found.')
-
-#     return load_from_file(file_path)
-
-
-# def save(potential, dir_str=None):
-#     """Save potential with correct file-naming.
-
-#     Parameters
-#     ----------
-#     potential : Potential
-#         Potential to be saved.
-#     dir_str : str, optional
-#         String corresponding to directory where file should be saved. May have
-#         trailing `/`.
-
-#     """
-#     # Set up format strings
-#     file_format_str = '{}/V{}_{}_{}_SLLJT_{}_lambda_{:.2f}_Np_{}_{}.dat'
-#     nodes_format_str = '{:.5e} {:.5e}\n'
-#     potential_format_str = '{:.5e} {:.5e} {:.5e}\n'
-
-#     # Get values for format string
-#     potential_type = potential.potential_type
-#     n_body = potential_type.n_body
-#     n_body_str = INV_NBODY_DICT[n_body]
-#     order = potential_type.order
-#     order_str = INV_ORDER_DICT[order]
-#     name = potential_type.name
-#     channel_str = str(potential_type.channel)
-#     lam = potential.lam
-#     num_points = len(potential.nodes)
-#     particles = potential_type.particles
-
-#     # Handle optional argument
-#     if dir_str is None:
-#         dir_str = os.path.join(STANDARD_PATH, n_body_str,
-#                                'SLLJT_{}'.format(channel_str))
-
-#     # Strip potential trailing '/'
-#     if dir_str[-1] == '/':
-#         dir_str = dir_str[:-1]
-
-#     # Create full file path string
-#     file_path = file_format_str.format(dir_str, n_body_str, order_str, name,
-#                                        channel_str, lam, num_points, particles)
-
-#     # Create directory if it doesnt exist
-#     _ensure_dir_for_file(file_path)
-
-#     # Output potential
-#     with open(file_path, 'w+') as file:
-#         for weight, node in zip(potential.weights, potential.nodes):
-#             file.write(nodes_format_str.format(weight, node))
-#         for i in range(num_points):
-#             for j in range(num_points):
-#                 file.write(potential_format_str.format(
-#                     potential.nodes[i], potential.nodes[j],
-#                     potential.without_weights()[i][j]))
-
-
-def fast_and_lazy_plot(potential, v_scale=1.0):
+def fast_and_lazy_plot(potential: Potential, v_scale: float = 1.0) -> None:
     """Plot potential with colorbar.
+
+    Creates a quick visualization of the potential matrix.
 
     Parameters
     ----------
     potential : Potential
         Potential to be plotted.
-    v_scale: float, optional
-        Maximum magnitude to be reflected on the colorbar scale.
+    v_scale : float, optional
+        Maximum magnitude to be reflected on the colorbar scale. Default is 1.0.
 
     """
     _, ax = plt.subplots()
@@ -962,7 +852,26 @@ def fast_and_lazy_plot(potential, v_scale=1.0):
 # ------------------- Internal Methods ------------------------------------- #
 
 
-def _add_w(matrix, weights, nodes):
+def _add_w(matrix: np.ndarray, weights: np.ndarray, nodes: np.ndarray) -> np.ndarray:
+    """Add Gaussian quadrature weights to potential matrix.
+
+    Transforms bare potential V(p,p') to weighted form for numerical integration.
+    The factor (2/π) comes from momentum-space normalization.
+
+    Parameters
+    ----------
+    matrix : ndarray
+        Unweighted potential matrix.
+    weights : ndarray
+        Gaussian quadrature weights.
+    nodes : ndarray
+        Momentum grid points.
+
+    Returns
+    -------
+    ndarray
+        Weighted potential matrix.
+    """
     factor_vector = [sqrt(w) * p for w, p in zip(weights, nodes)]
     weighted_matrix = np.dot(
         np.dot(np.diag(factor_vector), matrix), np.diag(factor_vector)
@@ -970,7 +879,26 @@ def _add_w(matrix, weights, nodes):
     return 2 / pi * weighted_matrix
 
 
-def _rem_w(matrix, weights, nodes):
+def _rem_w(matrix: np.ndarray, weights: np.ndarray, nodes: np.ndarray) -> np.ndarray:
+    """Remove Gaussian quadrature weights from potential matrix.
+
+    Transforms weighted potential back to bare form V(p,p').
+    The factor (π/2) inverts the normalization from _add_w.
+
+    Parameters
+    ----------
+    matrix : ndarray
+        Weighted potential matrix.
+    weights : ndarray
+        Gaussian quadrature weights.
+    nodes : ndarray
+        Momentum grid points.
+
+    Returns
+    -------
+    ndarray
+        Unweighted potential matrix.
+    """
     factor_vector = [1 / (sqrt(w) * p) for w, p in zip(weights, nodes)]
     unweighted_matrix = np.dot(
         np.dot(np.diag(factor_vector), pi / 2 * matrix), np.diag(factor_vector)
@@ -978,13 +906,21 @@ def _rem_w(matrix, weights, nodes):
     return unweighted_matrix
 
 
-def _ensure_dir_for_file(file):
-    directory = os.path.dirname(file)
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+def _submatrix(potential: np.ndarray, ranges: Tuple[int, int, int, int]) -> np.ndarray:
+    """Extract submatrix from potential matrix.
 
+    Parameters
+    ----------
+    potential : ndarray
+        Full potential matrix.
+    ranges : tuple of int
+        Row and column ranges (row_start, row_end, col_start, col_end).
 
-def _submatrix(potential, ranges):
+    Returns
+    -------
+    ndarray
+        Extracted submatrix.
+    """
     return potential[
         np.ix_(list(range(ranges[0], ranges[1])), list(range(ranges[2], ranges[3])))
     ]

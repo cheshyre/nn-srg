@@ -287,8 +287,7 @@ class PotentialType:
         Parameters
         ----------
         name : str
-            Name for potential, may reflect information about its origin
-            (e.g., "EM500", "Av18").
+            Name for potential (e.g., "EM500", "AV18").
         channel : Union[Channel, CoupledChannel]
             Object representing the partial wave channel(s) for the potential.
         particles : str
@@ -381,7 +380,7 @@ class Potential:
         weights : Union[List[float], np.ndarray]
             Integration weights corresponding to nodes.
         potential : np.ndarray
-            Potential matrix data (dimension: len(nodes) × len(nodes)).
+            Potential matrix data (dimension: len(nodes) x len(nodes)).
         lam : float, optional
             SRG flow parameter lambda (fm^-1), by default 50.0.
             Values of 50.0 indicate unevolved potential.
@@ -613,7 +612,7 @@ class CoupledPotential(Potential):
             raise ValueError('Not all given potentials have same dim.')
         dim = dim.pop()
         
-        # Determine coupling structure (c_dim × c_dim blocks of dim × dim)
+        # Determine coupling structure (c_dim x c_dim blocks of dim x dim)
         c_dim = int(sqrt(len(list_of_potentials)))
         if c_dim**2 != len(list_of_potentials):
             raise ValueError('Non-square number of potentials given.')

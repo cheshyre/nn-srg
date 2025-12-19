@@ -70,6 +70,7 @@ Example scripts for SRG evolution and visualization are provided in the `exec/` 
 - Bogner, S. K., Furnstahl, R. J., Perry, R. J. (2007). "Similarity renormalization group for nucleon-nucleon interactions." [Physical Review C 75, 061001](https://doi.org/10.1103/PhysRevC.75.061001).
 
 **Nuclear Forces:**
+- Epelbaum, E., Hammer, H.-W., Meißner, U.-G. (2009). "Modern theory of nuclear forces." [Reviews of Modern Physics 81, 1773](https://doi.org/10.1103/RevModPhys.81.1773).
 - Machleidt, R., Entem, D. R. (2011). "Chiral effective field theory and nuclear forces." [Physics Reports 503, 1](https://doi.org/10.1016/j.physrep.2011.02.001).
 - `EM500`: Entem, D. R., Machleidt, R. (2003). "Accurate charge-dependent nucleon-nucleon potential at fourth order of chiral perturbation theory." [Physical Review C 68, 041001(R)](https://doi.org/10.1103/PhysRevC.68.041001).
 - `AV18`: Wiringa, R. B., Stoks, V. G. J., Schiavilla, R. (1995). "Accurate nucleon-nucleon potential with charge-independence breaking." [Physical Review C 51, 38](https://doi.org/10.1103/PhysRevC.51.38).

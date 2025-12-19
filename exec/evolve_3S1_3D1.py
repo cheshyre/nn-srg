@@ -1,5 +1,5 @@
 # Copyright (c) 2025 Matthias Heinz
-# 
+#
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
@@ -21,4 +21,3 @@ srg.evolve(1.8, verbose=True)
 
 print(diagonalize_hamiltonian(srg.get_potential()))
 fast_and_lazy_plot(srg.get_potential().extract_channel_potential(pot._channels[0]), 2.0)
-

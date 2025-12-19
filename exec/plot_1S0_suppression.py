@@ -1,5 +1,5 @@
 # Copyright (c) 2025 Matthias Heinz
-# 
+#
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
@@ -35,10 +35,7 @@ i_nodes = np.linspace(2.0, kmax - 1e-3, 200)
 # Set lambdas to show
 lambdas = [
     # (25.0, r"\infty")
-] + [
-    (x, f"{x:0.1f}" + r"\:\mathrm{fm}^{-1}")
-    for x in [4.0, 3.0, 2.5, 2.0]
-]
+] + [(x, f"{x:0.1f}" + r"\:\mathrm{fm}^{-1}") for x in [4.0, 3.0, 2.5, 2.0]]
 
 line_styles = [":", "--", "-.", "-"]
 
@@ -55,7 +52,7 @@ srg = SRG(pot)
 nodes = np.array(pot.nodes)
 orig = np.array(pot.without_weights()[0])
 
-f = interp1d(nodes, orig, kind='cubic', bounds_error=False, fill_value=0.0)
+f = interp1d(nodes, orig, kind="cubic", bounds_error=False, fill_value=0.0)
 
 i_orig = f(i_nodes)
 
@@ -74,13 +71,19 @@ for i, lll in enumerate(lambdas):
     ax.tick_params(bottom=True, top=True, left=True, right=True, which="both")
     ax.tick_params(axis="x", which="both", direction="in")
     ax.tick_params(axis="y", which="both", direction="in")
-    ax.tick_params(which='major', length=5)
-    
-    f = interp1d(nodes, new, kind='cubic', bounds_error=False, fill_value=0.0)
+    ax.tick_params(which="major", length=5)
+
+    f = interp1d(nodes, new, kind="cubic", bounds_error=False, fill_value=0.0)
     i_new = f(i_nodes)
     i_ratio = i_new / (i_orig + 1e-8)
 
-    ax.plot(i_nodes**2, i_ratio, color=color, ls=line_styles[i], label=r"$\lambda = " + lam_disp + r"$")
+    ax.plot(
+        i_nodes**2,
+        i_ratio,
+        color=color,
+        ls=line_styles[i],
+        label=r"$\lambda = " + lam_disp + r"$",
+    )
 
 ax.set_xlim((4, 25))
 ax.set_yscale("log")
@@ -101,4 +104,3 @@ path = __file__.replace(".py", ".pdf").replace("scripts", "plots")
 pathlib.Path(path).parent.mkdir(parents=True, exist_ok=True)
 plt.savefig(path, dpi=300)
 plt.close(fig)
-

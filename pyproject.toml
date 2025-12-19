@@ -1,6 +1,6 @@
 [project]
 name = "nn-srg"
-version = "0.1.0"
+version = "1.0.0"
 description = "Python package to perform similarity renormalization group evolution of nucleon-nucleon potentials"
 authors = [
     {name = "Matthias Heinz",email = "heinzmc@ornl.gov"}
